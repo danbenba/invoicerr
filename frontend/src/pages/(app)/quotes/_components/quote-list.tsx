@@ -2,13 +2,13 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Download, Edit, Eye, FileText, Plus, Signature, Trash2 } from "lucide-react"
 import { forwardRef, useEffect, useImperativeHandle, useState } from "react"
 import { useGetRaw, usePost } from "@/hooks/use-fetch"
+import { useNavigate } from "react-router"
 
 import BetterPagination from "../../../../components/pagination"
 import { Button } from "../../../../components/ui/button"
 import type { Quote } from "@/types"
 import { QuoteDeleteDialog } from "@/pages/(app)/quotes/_components/quote-delete"
 import { QuotePdfModal } from "@/pages/(app)/quotes/_components/quote-pdf-view"
-import { QuoteUpsert } from "@/pages/(app)/quotes/_components/quote-upsert"
 import { QuoteViewDialog } from "@/pages/(app)/quotes/_components/quote-view"
 import type React from "react"
 import { Spinner } from "@/components/ui/spinner"
@@ -38,14 +38,13 @@ export const QuoteList = forwardRef<QuoteListHandle, QuoteListProps>(
         ref,
     ) => {
         const { t } = useTranslation()
+        const navigate = useNavigate()
         const { trigger: triggerSendForSignature, loading: signatureLoading } = usePost<{ message: string; signature: { id: string } }>(
             `/api/signatures`,
         )
         const { trigger: triggerCreateInvoice } = usePost(`/api/invoices/create-from-quote`)
 
-        const [createQuoteDialog, setCreateQuoteDialog] = useState<boolean>(false)
         const [quoteIdForSignature, setQuoteIdForSignature] = useState<string | null>(null)
-        const [editQuoteDialog, setEditQuoteDialog] = useState<Quote | null>(null)
         const [viewQuoteDialog, setViewQuoteDialog] = useState<Quote | null>(null)
         const [viewQuotePdfDialog, setViewQuotePdfDialog] = useState<Quote | null>(null)
         const [deleteQuoteDialog, setDeleteQuoteDialog] = useState<Quote | null>(null)
@@ -55,7 +54,7 @@ export const QuoteList = forwardRef<QuoteListHandle, QuoteListProps>(
 
         useImperativeHandle(ref, () => ({
             handleAddClick() {
-                setCreateQuoteDialog(true)
+                navigate("/quotes/new")
             },
         }))
 
@@ -77,11 +76,11 @@ export const QuoteList = forwardRef<QuoteListHandle, QuoteListProps>(
         }, [downloadQuotePdf, pdf])
 
         function handleAddClick() {
-            setCreateQuoteDialog(true)
+            navigate("/quotes/new")
         }
 
         function handleEdit(quote: Quote) {
-            setEditQuoteDialog(quote)
+            navigate(`/quotes/${quote.id}/edit`)
         }
 
         function handleView(quote: Quote) {
@@ -336,23 +335,6 @@ export const QuoteList = forwardRef<QuoteListHandle, QuoteListProps>(
                         </CardFooter>
                     )}
                 </Card>
-
-                <QuoteUpsert
-                    open={createQuoteDialog}
-                    onOpenChange={(open) => {
-                        setCreateQuoteDialog(open)
-                        if (!open) mutate && mutate()
-                    }}
-                />
-
-                <QuoteUpsert
-                    open={!!editQuoteDialog}
-                    quote={editQuoteDialog}
-                    onOpenChange={(open) => {
-                        if (!open) setEditQuoteDialog(null)
-                        mutate && mutate()
-                    }}
-                />
 
                 <QuoteViewDialog
                     quote={viewQuoteDialog}

@@ -13,12 +13,15 @@ export type Path =
   | `/invoices`
   | `/payment-methods`
   | `/quotes`
+  | `/quotes/:id/edit`
+  | `/quotes/new`
   | `/receipts`
   | `/settings/:tab?`
   | `/signature/:id`
   | `/stats`
 
 export type Params = {
+  '/quotes/:id/edit': { id: string }
   '/settings/:tab?': { tab?: string }
   '/signature/:id': { id: string }
 }

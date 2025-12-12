@@ -1,15 +1,15 @@
 "use client"
 
 import type { Client, PaymentMethod, Quote } from "@/types"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { DndContext, MouseSensor, TouchSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core"
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form"
-import { GripVertical, Plus, Trash2, X } from "lucide-react"
+import { GripVertical, Plus, Trash2, ArrowLeft } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable"
 import { useEffect, useMemo, useState } from "react"
 import { useFieldArray, useForm } from "react-hook-form"
 import { useGet, usePatch, usePost } from "@/hooks/use-fetch"
+import { useNavigate } from "react-router"
 
 import { Button } from "@/components/ui/button"
 import { CSS } from "@dnd-kit/utilities"
@@ -21,21 +21,22 @@ import { PaymentMethodType } from "@/types"
 import type React from "react"
 import SearchSelect from "@/components/search-input"
 import { Textarea } from "@/components/ui/textarea"
+import { toast } from "sonner"
 import { useTranslation } from "react-i18next"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 
-interface QuoteUpsertDialogProps {
-    quote?: Quote | null
-    open: boolean
-    onOpenChange: (open: boolean) => void
+interface QuoteUpsertPageProps {
+    quoteId?: string
 }
 
-export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProps) {
+export function QuoteUpsertPage({ quoteId }: QuoteUpsertPageProps) {
     const { t } = useTranslation()
-    const isEdit = !!quote
+    const navigate = useNavigate()
+    const isEdit = !!quoteId
 
     const [clientDialogOpen, setClientDialogOpen] = useState(false)
+    const { data: quote } = useGet<Quote>(quoteId ? `/api/quotes/${quoteId}` : null)
 
     const quoteSchema = z.object({
         title: z.string().optional(),
@@ -86,7 +87,7 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
     const { data: paymentMethods } = useGet<PaymentMethod[]>(`/api/payment-methods`)
 
     const { trigger: createTrigger } = usePost("/api/quotes")
-    const { trigger: updateTrigger } = usePatch(`/api/quotes/${quote?.id}`)
+    const { trigger: updateTrigger } = usePatch(`/api/quotes/${quoteId}`)
 
     const form = useForm<z.infer<typeof quoteSchema>>({
         resolver: zodResolver(quoteSchema),
@@ -196,10 +197,13 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
 
         trigger(data)
             .then(() => {
-                onOpenChange(false)
-                form.reset()
+                toast.success(t(`quotes.upsert.messages.${isEdit ? "updateSuccess" : "createSuccess"}`))
+                navigate("/quotes")
             })
-            .catch((err) => console.error(err))
+            .catch((err) => {
+                console.error(err)
+                toast.error(t(`quotes.upsert.messages.${isEdit ? "updateError" : "createError"}`))
+            })
     }
 
     const handleClientCreate = (newClient: Client) => {
@@ -211,25 +215,27 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
 
     return (
         <>
-            <Dialog open={open} onOpenChange={onOpenChange}>
-                <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto p-0" dataCy="quote-dialog">
+            <div className="min-h-screen bg-background">
+                <div className="max-w-6xl mx-auto p-6">
                     <Form {...form}>
                         <form onSubmit={handleSubmit(onSubmit)} className="data-cy=quote-form">
                             {/* En-tête style feuille */}
-                            <div className="bg-white border-b border-gray-200 p-6 sticky top-0 z-10">
+                            <div className="bg-card border-b border-border p-6 sticky top-0 z-10 mb-6 rounded-t-lg">
                                 <div className="flex items-center justify-between mb-4">
-                                    <h2 className="text-2xl font-bold text-gray-900">
-                                        {t(`quotes.upsert.title.${isEdit ? "edit" : "create"}`)}
-                                    </h2>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => onOpenChange(false)}
-                                        className="h-8 w-8"
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </Button>
+                                    <div className="flex items-center gap-4">
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => navigate("/quotes")}
+                                            className="h-8 w-8"
+                                        >
+                                            <ArrowLeft className="h-4 w-4" />
+                                        </Button>
+                                        <h2 className="text-2xl font-bold text-foreground">
+                                            {t(`quotes.upsert.title.${isEdit ? "edit" : "create"}`)}
+                                        </h2>
+                                    </div>
                                 </div>
 
                                 {/* Informations principales en ligne */}
@@ -304,8 +310,8 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                             </div>
 
                             {/* Corps de la feuille */}
-                            <div className="bg-gray-50 p-6">
-                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                            <div className="bg-muted/30 p-6">
+                                <div className="bg-card rounded-lg shadow-sm border border-border p-6">
                                     {/* Titre optionnel */}
                                     <FormField
                                         control={control}
@@ -316,7 +322,7 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                                                     <Input 
                                                         {...field} 
                                                         placeholder={t("quotes.upsert.form.title.placeholder")}
-                                                        className="text-lg font-semibold border-0 border-b-2 border-gray-300 focus:border-primary rounded-none px-0"
+                                                        className="text-lg font-semibold border-0 border-b-2 border-border focus:border-primary rounded-none px-0 bg-transparent"
                                                     />
                                                 </FormControl>
                                                 <FormMessage />
@@ -329,24 +335,24 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                                         <div className="overflow-x-auto">
                                             <table className="w-full">
                                                 <thead>
-                                                    <tr className="border-b-2 border-gray-300">
-                                                        <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700 w-8"></th>
-                                                        <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700 min-w-[300px]">
+                                                    <tr className="border-b-2 border-border">
+                                                        <th className="text-left py-3 px-2 text-sm font-semibold text-muted-foreground w-8"></th>
+                                                        <th className="text-left py-3 px-2 text-sm font-semibold text-muted-foreground min-w-[300px]">
                                                             {t("quotes.upsert.form.items.description.label")}
                                                         </th>
-                                                        <th className="text-left py-3 px-2 text-sm font-semibold text-gray-700 w-32">
+                                                        <th className="text-left py-3 px-2 text-sm font-semibold text-muted-foreground w-32">
                                                             {t("quotes.upsert.form.items.type.label")}
                                                         </th>
-                                                        <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 w-24">
+                                                        <th className="text-right py-3 px-2 text-sm font-semibold text-muted-foreground w-24">
                                                             {t("quotes.upsert.form.items.quantity.label")}
                                                         </th>
-                                                        <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 w-32">
+                                                        <th className="text-right py-3 px-2 text-sm font-semibold text-muted-foreground w-32">
                                                             {t("quotes.upsert.form.items.unitPrice.label")}
                                                         </th>
-                                                        <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 w-24">
+                                                        <th className="text-right py-3 px-2 text-sm font-semibold text-muted-foreground w-24">
                                                             {t("quotes.upsert.form.items.vatRate.label")}
                                                         </th>
-                                                        <th className="text-right py-3 px-2 text-sm font-semibold text-gray-700 w-32">
+                                                        <th className="text-right py-3 px-2 text-sm font-semibold text-muted-foreground w-32">
                                                             Total
                                                         </th>
                                                         <th className="w-12"></th>
@@ -364,9 +370,9 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                                                                         key={fieldItem.id}
                                                                         id={fieldItem.id}
                                                                     >
-                                                                        <tr className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                                                                        <tr className="border-b border-border hover:bg-muted/50 transition-colors">
                                                                             <td className="py-2 px-2">
-                                                                                <GripVertical className="h-5 w-5 text-gray-400 cursor-grab" />
+                                                                                <GripVertical className="h-5 w-5 text-muted-foreground cursor-grab" />
                                                                             </td>
                                                                             <td className="py-2 px-2">
                                                                                 <FormField
@@ -378,7 +384,7 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                                                                                                 <Input
                                                                                                     {...field}
                                                                                                     placeholder={t("quotes.upsert.form.items.description.placeholder")}
-                                                                                                    className="border-0 focus:ring-0 focus:border-b-2 focus:border-primary rounded-none px-0 h-9"
+                                                                                                    className="border-0 focus:ring-0 focus:border-b-2 focus:border-primary rounded-none px-0 h-9 bg-transparent"
                                                                                                 />
                                                                                             </FormControl>
                                                                                             <FormMessage />
@@ -394,7 +400,7 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                                                                                         <FormItem>
                                                                                             <FormControl>
                                                                                                 <Select value={field.value ?? 'SERVICE'} onValueChange={(val) => field.onChange(val as any)}>
-                                                                                                    <SelectTrigger className="h-9 border-0 border-b-2 border-gray-300 focus:border-primary rounded-none px-0">
+                                                                                                    <SelectTrigger className="h-9 border-0 border-b-2 border-border focus:border-primary rounded-none px-0 bg-transparent">
                                                                                                         <SelectValue />
                                                                                                     </SelectTrigger>
                                                                                                     <SelectContent>
@@ -424,7 +430,7 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                                                                                                     value={field.value || ""}
                                                                                                     onChange={(e) => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
                                                                                                     placeholder="0"
-                                                                                                    className="text-right border-0 focus:ring-0 focus:border-b-2 focus:border-primary rounded-none px-0 h-9"
+                                                                                                    className="text-right border-0 focus:ring-0 focus:border-b-2 focus:border-primary rounded-none px-0 h-9 bg-transparent"
                                                                                                 />
                                                                                             </FormControl>
                                                                                             <FormMessage />
@@ -446,9 +452,9 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                                                                                                         value={field.value || ""}
                                                                                                         onChange={(e) => field.onChange(e.target.value === "" ? undefined : Number(e.target.value))}
                                                                                                         placeholder="0.00"
-                                                                                                        className="text-right border-0 focus:ring-0 focus:border-b-2 focus:border-primary rounded-none px-0 h-9 w-full"
+                                                                                                        className="text-right border-0 focus:ring-0 focus:border-b-2 focus:border-primary rounded-none px-0 h-9 w-full bg-transparent"
                                                                                                     />
-                                                                                                    <span className="text-gray-500 ml-1">{currency}</span>
+                                                                                                    <span className="text-muted-foreground ml-1">{currency}</span>
                                                                                                 </div>
                                                                                             </FormControl>
                                                                                             <FormMessage />
@@ -471,9 +477,9 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                                                                                                         value={field.value || ""}
                                                                                                         onChange={(e) => field.onChange(e.target.value === "" ? undefined : Number.parseFloat(e.target.value.replace(",", ".")))}
                                                                                                         placeholder="0"
-                                                                                                        className="text-right border-0 focus:ring-0 focus:border-b-2 focus:border-primary rounded-none px-0 h-9 w-16"
+                                                                                                        className="text-right border-0 focus:ring-0 focus:border-b-2 focus:border-primary rounded-none px-0 h-9 w-16 bg-transparent"
                                                                                                     />
-                                                                                                    <span className="text-gray-500 ml-1">%</span>
+                                                                                                    <span className="text-muted-foreground ml-1">%</span>
                                                                                                 </div>
                                                                                             </FormControl>
                                                                                             <FormMessage />
@@ -481,7 +487,7 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                                                                                     )}
                                                                                 />
                                                                             </td>
-                                                                            <td className="py-2 px-2 text-right font-medium text-gray-900">
+                                                                            <td className="py-2 px-2 text-right font-medium text-foreground">
                                                                                 {currency} {itemTotal}
                                                                             </td>
                                                                             <td className="py-2 px-2">
@@ -490,7 +496,7 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                                                                                     variant="ghost"
                                                                                     size="icon"
                                                                                     onClick={() => onRemove(index)}
-                                                                                    className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                                    className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                                                                                     dataCy={`remove-item-${index}`}
                                                                                 >
                                                                                     <Trash2 className="h-4 w-4" />
@@ -528,20 +534,20 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                                     </div>
 
                                     {/* Totaux */}
-                                    <div className="mt-8 border-t-2 border-gray-300 pt-4">
+                                    <div className="mt-8 border-t-2 border-border pt-4">
                                         <div className="flex justify-end">
                                             <div className="w-80 space-y-2">
                                                 <div className="flex justify-between text-sm">
-                                                    <span className="text-gray-600">{t("quotes.view.fields.totalHT")}:</span>
-                                                    <span className="font-medium">{currency} {totals.totalHT}</span>
+                                                    <span className="text-muted-foreground">{t("quotes.view.fields.totalHT")}:</span>
+                                                    <span className="font-medium text-foreground">{currency} {totals.totalHT}</span>
                                                 </div>
                                                 <div className="flex justify-between text-sm">
-                                                    <span className="text-gray-600">{t("quotes.view.fields.totalVAT")}:</span>
-                                                    <span className="font-medium">{currency} {totals.totalVAT}</span>
+                                                    <span className="text-muted-foreground">{t("quotes.view.fields.totalVAT")}:</span>
+                                                    <span className="font-medium text-foreground">{currency} {totals.totalVAT}</span>
                                                 </div>
-                                                <div className="flex justify-between text-lg font-bold pt-2 border-t border-gray-300">
-                                                    <span>{t("quotes.view.fields.totalTTC")}:</span>
-                                                    <span>{currency} {totals.totalTTC}</span>
+                                                <div className="flex justify-between text-lg font-bold pt-2 border-t border-border">
+                                                    <span className="text-foreground">{t("quotes.view.fields.totalTTC")}:</span>
+                                                    <span className="text-foreground">{currency} {totals.totalTTC}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -558,7 +564,7 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                                                         <Textarea 
                                                             {...field} 
                                                             placeholder={t("quotes.upsert.form.notes.placeholder")}
-                                                            className="min-h-[100px] border-gray-300 focus:border-primary"
+                                                            className="min-h-[100px] border-border focus:border-primary bg-background"
                                                         />
                                                     </FormControl>
                                                     <FormMessage />
@@ -574,7 +580,7 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                                                     <FormItem>
                                                         <FormControl>
                                                             <Select value={field.value ?? ""} onValueChange={(val) => field.onChange(val || "")}>
-                                                                <SelectTrigger className="border-gray-300 focus:border-primary">
+                                                                <SelectTrigger className="border-border focus:border-primary bg-background">
                                                                     <SelectValue placeholder={t("quotes.upsert.form.paymentMethod.placeholder")} />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
@@ -596,9 +602,9 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                             </div>
 
                             {/* Footer avec boutons */}
-                            <div className="bg-white border-t border-gray-200 p-6 sticky bottom-0 z-10">
+                            <div className="bg-card border-t border-border p-6 sticky bottom-0 z-10 mt-6 rounded-b-lg">
                                 <div className="flex justify-end space-x-2">
-                                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                                    <Button type="button" variant="outline" onClick={() => navigate("/quotes")}>
                                         {t("quotes.upsert.actions.cancel")}
                                     </Button>
                                     <Button type="submit" dataCy="quote-submit">
@@ -608,8 +614,8 @@ export function QuoteUpsert({ quote, open, onOpenChange }: QuoteUpsertDialogProp
                             </div>
                         </form>
                     </Form>
-                </DialogContent>
-            </Dialog>
+                </div>
+            </div>
 
             <ClientUpsert
                 open={clientDialogOpen}
@@ -640,3 +646,4 @@ function SortableItem({
         </tr>
     )
 }
+

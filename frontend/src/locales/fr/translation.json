@@ -271,12 +271,17 @@
                     "label": "Articles du devis",
                     "addItem": "Ajouter un article",
                     "description": {
+                        "label": "Description",
                         "placeholder": "Description de l'article",
                         "errors": {
                             "required": "La description est requise"
                         }
                     },
+                    "type": {
+                        "label": "Type"
+                    },
                     "quantity": {
+                        "label": "Quantité",
                         "placeholder": "Qté",
                         "unit": "pcs",
                         "errors": {
@@ -286,6 +291,7 @@
                         }
                     },
                     "unitPrice": {
+                        "label": "Prix unitaire",
                         "placeholder": "Prix unitaire",
                         "errors": {
                             "required": "Le prix unitaire est requis",
@@ -294,6 +300,7 @@
                         }
                     },
                     "vatRate": {
+                        "label": "TVA",
                         "placeholder": "TVA %",
                         "errors": {
                             "required": "Le taux de TVA est requis",
@@ -320,6 +327,12 @@
                 "cancel": "Annuler",
                 "create": "Créer le devis",
                 "save": "Enregistrer les modifications"
+            },
+            "messages": {
+                "createSuccess": "Devis créé avec succès",
+                "createError": "Échec de la création du devis",
+                "updateSuccess": "Devis mis à jour avec succès",
+                "updateError": "Échec de la mise à jour du devis"
             }
         },
         "view": {
