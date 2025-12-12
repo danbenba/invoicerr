@@ -69,7 +69,9 @@ export class EditCompanyDto {
     country: string
     phone: string
     email: string
-    pdfConfig: PDFConfigDto
+    pdfConfig?: PDFConfigDto
+    logoB64?: string | null
+    includeLogo?: boolean
     quoteStartingNumber: number
     quoteNumberFormat: string
     invoiceStartingNumber: number

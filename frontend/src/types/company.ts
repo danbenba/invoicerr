@@ -16,4 +16,6 @@ export interface Company {
     quoteNumberFormat: string
     invoiceStartingNumber: number
     invoiceNumberFormat: string
+    logoB64?: string | null
+    includeLogo?: boolean
 }

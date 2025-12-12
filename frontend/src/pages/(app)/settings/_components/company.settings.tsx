@@ -3,6 +3,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useEffect, useState } from "react"
 import { useGet, usePost } from "@/hooks/use-fetch"
+import { Upload, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import type { Company } from "@/types"
@@ -134,6 +135,8 @@ export default function CompanySettings() {
                 return ALLOWED_DATE_FORMATS.includes(val)
             }, t("settings.company.form.dateFormat.errors.format")),
         exemptVat: z.boolean().optional(),
+        logoB64: z.string().nullable().optional(),
+        includeLogo: z.boolean().optional(),
     })
 
     const { data } = useGet<Company>("/api/company/info")
@@ -163,6 +166,8 @@ export default function CompanySettings() {
             invoiceNumberFormat: "INV-{year}-{number}",
             receiptStartingNumber: 1,
             receiptNumberFormat: "REC-{year}-{number}",
+            logoB64: null,
+            includeLogo: false,
         },
     })
 
@@ -172,6 +177,8 @@ export default function CompanySettings() {
                 ...data,
                 foundedAt: new Date(data.foundedAt),
                 exemptVat: !!data.exemptVat,
+                logoB64: data.logoB64 || null,
+                includeLogo: data.includeLogo || false,
             })
         }
     }, [data, form])
@@ -210,6 +217,75 @@ export default function CompanySettings() {
                             <CardDescription>{t("settings.company.basicInfoDescription")}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
+                            <FormField
+                                control={form.control}
+                                name="includeLogo"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-col space-y-3">
+                                        <FormLabel>{t("settings.company.form.logo.label")}</FormLabel>
+                                        <FormControl>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center space-x-2">
+                                                    <Switch checked={!!field.value} onCheckedChange={(val) => field.onChange(val)} />
+                                                    <span className="text-sm">{t("settings.company.form.logo.includeLogo")}</span>
+                                                </div>
+                                                {field.value && (
+                                                    <div className="space-y-4">
+                                                        {form.watch("logoB64") ? (
+                                                            <div className="relative inline-block">
+                                                                <img
+                                                                    src={form.watch("logoB64") || "/placeholder.svg"}
+                                                                    alt={t("settings.company.form.logo.logoPreview")}
+                                                                    className="max-h-20 max-w-40 border border-border rounded"
+                                                                />
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="destructive"
+                                                                    size="sm"
+                                                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full p-0"
+                                                                    onClick={() => {
+                                                                        form.setValue("logoB64", null)
+                                                                        field.onChange(false)
+                                                                    }}
+                                                                >
+                                                                    <X className="h-3 w-3" />
+                                                                </Button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                                                                <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                                                                <label htmlFor="logo-upload" className="cursor-pointer">
+                                                                    <span className="text-sm text-muted-foreground">
+                                                                        {t("settings.company.form.logo.uploadText")}
+                                                                    </span>
+                                                                    <Input
+                                                                        id="logo-upload"
+                                                                        type="file"
+                                                                        accept="image/*"
+                                                                        className="hidden"
+                                                                        onChange={(e) => {
+                                                                            const file = e.target.files?.[0]
+                                                                            if (file) {
+                                                                                const reader = new FileReader()
+                                                                                reader.onloadend = () => {
+                                                                                    form.setValue("logoB64", reader.result as string)
+                                                                                }
+                                                                                reader.readAsDataURL(file)
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </label>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </FormControl>
+                                        <FormDescription>{t("settings.company.form.logo.description")}</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <FormField
                                     control={form.control}

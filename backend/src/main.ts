@@ -10,9 +10,10 @@ async function bootstrap() {
     credentials: true,
     origin: ['http://localhost:5173', process.env.APP_URL, ...(process.env.CORS_ORIGINS?.split(',').map(o => o.trim()) || [])].filter(Boolean),
   });
-  app.use(cookieParser());
   app.setGlobalPrefix('api');
-  app.use(bodyParser.json({ limit: '1mb' }));
+  app.use(bodyParser.json({ limit: '20mb' }));
+  app.use(bodyParser.urlencoded({ limit: '20mb', extended: true }));
+  app.use(cookieParser());
   app.use((_req, res, next) => {
     res.header('Access-Control-Expose-Headers', 'WWW-Authenticate');
     next();

@@ -25,7 +25,12 @@ export class CompanyService {
     }
 
     async getCompanyInfo() {
-        const company = await prisma.company.findFirst({ include: { emailTemplates: true } });
+        const company = await prisma.company.findFirst({ 
+            include: { 
+                emailTemplates: true,
+                pdfConfig: true
+            } 
+        });
 
         if (!company) {
             return null
@@ -85,7 +90,20 @@ export class CompanyService {
             })
         ]);
 
-        return await prisma.company.findFirst();
+        const companyWithLogo = await prisma.company.findFirst({
+            include: { pdfConfig: true }
+        });
+
+        if (!companyWithLogo) {
+            return null;
+        }
+
+        // Add logo info to company object
+        return {
+            ...companyWithLogo,
+            logoB64: companyWithLogo.pdfConfig?.logoB64 || null,
+            includeLogo: companyWithLogo.pdfConfig?.includeLogo || false,
+        };
     }
 
     async getPDFTemplateConfig(): Promise<PDFConfigDto> {
@@ -234,10 +252,12 @@ export class CompanyService {
 
     async editCompanyInfo(editCompanyDto: EditCompanyDto) {
         const data = { ...editCompanyDto };
-        const existingCompany = await prisma.company.findFirst();
+        const existingCompany = await prisma.company.findFirst({
+            include: { pdfConfig: true }
+        });
 
         if (existingCompany) {
-            const { pdfConfig, ...rest } = data;
+            const { pdfConfig, logoB64, includeLogo, ...rest } = data;
 
             const updatedCompany = await prisma.company.update({
                 where: { id: existingCompany.id },
@@ -245,6 +265,22 @@ export class CompanyService {
                     ...rest
                 }
             });
+
+            // Update PDF config with logo if provided
+            if (logoB64 !== undefined || includeLogo !== undefined) {
+                await prisma.pDFConfig.update({
+                    where: { id: existingCompany.pdfConfig.id },
+                    data: {
+                        logoB64: logoB64 !== undefined ? logoB64 : undefined,
+                        includeLogo: includeLogo !== undefined ? includeLogo : undefined,
+                    }
+                });
+            }
+
+            // Update PDF config if provided
+            if (pdfConfig) {
+                await this.editPDFTemplateConfig(pdfConfig);
+            }
 
             try {
                 await this.webhookDispatcher.dispatch(WebhookEvent.COMPANY_UPDATED, {
@@ -256,11 +292,16 @@ export class CompanyService {
 
             return updatedCompany;
         } else {
+            const { pdfConfig, logoB64, includeLogo, ...companyData } = data;
+            
             const newCompany = await prisma.company.create({
                 data: {
-                    ...data,
+                    ...companyData,
                     pdfConfig: {
-                        create: {}
+                        create: {
+                            logoB64: logoB64 || null,
+                            includeLogo: includeLogo || false,
+                        }
                     },
                     emailTemplates: {
                         createMany: {
