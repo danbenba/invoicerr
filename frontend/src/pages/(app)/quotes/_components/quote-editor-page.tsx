@@ -620,14 +620,16 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                 </div>
 
                                 {/* Titre optionnel */}
-                                <div className="mb-4">
-                                    <Input
-                                        value={quoteData.title}
-                                        onChange={(e) => setQuoteData(prev => ({ ...prev, title: e.target.value }))}
-                                        placeholder={t("quotes.upsert.form.title.placeholder")}
-                                        className="text-lg font-semibold border-0 border-b border-border focus:border-blue-500 rounded-none px-0"
-                                    />
-                                </div>
+                                {complementaryOptions.title && (
+                                    <div className="mb-4">
+                                        <Input
+                                            value={quoteData.title}
+                                            onChange={(e) => setQuoteData(prev => ({ ...prev, title: e.target.value }))}
+                                            placeholder={t("quotes.upsert.form.title.placeholder")}
+                                            className="text-lg font-semibold border-0 border-b border-border focus:border-blue-500 rounded-none px-0"
+                                        />
+                                    </div>
+                                )}
 
                                 {/* Tableau des lignes */}
                                 <div className="mb-6">
@@ -635,8 +637,16 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                         <table className="w-full border-collapse">
                                             <thead className="bg-[#6366f1] text-white">
                                                 <tr>
+                                                    {billingType === "COMPLET" && (
+                                                        <th className="text-left py-3 px-4 text-sm font-semibold w-32">Type</th>
+                                                    )}
                                                     <th className="text-left py-3 px-4 text-sm font-semibold tracking-wide">Désignation</th>
-                                                    <th className="text-right py-3 px-4 text-sm font-semibold w-24">TVA</th>
+                                                    {billingType === "COMPLET" && (
+                                                        <th className="text-right py-3 px-4 text-sm font-semibold w-24">Qté</th>
+                                                    )}
+                                                    {quoteData.vatExemptionReason === "none" && (
+                                                        <th className="text-right py-3 px-4 text-sm font-semibold w-24">TVA</th>
+                                                    )}
                                                     <th className="text-right py-3 px-4 text-sm font-semibold w-32">Montant HT</th>
                                                     <th className="w-10"></th>
                                                 </tr>
@@ -646,7 +656,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                     <tr key={index} className="border-b border-dashed border-gray-200 group hover:bg-gray-50/50">
                                                         {item.type === QuoteItemType.SECTION ? (
                                                             <>
-                                                                <td className="py-2 px-4" colSpan={3}>
+                                                                <td className="py-2 px-4" colSpan={billingType === "COMPLET" ? (quoteData.vatExemptionReason === "none" ? 6 : 5) : (quoteData.vatExemptionReason === "none" ? 4 : 3)}>
                                                                     <Input
                                                                         value={item.description}
                                                                         onChange={(e) => updateItem(index, "description", e.target.value)}
@@ -668,6 +678,19 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                             </>
                                                         ) : (
                                                             <>
+                                                                {billingType === "COMPLET" && (
+                                                                    <td className="py-2 px-4">
+                                                                        <Select value={item.type || "SERVICE"} onValueChange={(val) => updateItem(index, "type", val)}>
+                                                                            <SelectTrigger className="border-0 h-9 p-0 focus:ring-0 focus:border-b focus:border-blue-500 rounded-none">
+                                                                                <SelectValue />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent>
+                                                                                <SelectItem value="SERVICE">Prestation</SelectItem>
+                                                                                <SelectItem value="GOOD">Bien</SelectItem>
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    </td>
+                                                                )}
                                                                 <td className="py-2 px-4">
                                                                     <Input
                                                                         value={item.description}
@@ -676,17 +699,29 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                                         className="border-0 focus:ring-0 focus:border-b focus:border-blue-500 rounded-none px-0 h-9 text-sm w-full bg-transparent"
                                                                     />
                                                                 </td>
-                                                                <td className="py-2 px-4">
-                                                                    <div className="flex items-center justify-end gap-1">
+                                                                {billingType === "COMPLET" && (
+                                                                    <td className="py-2 px-4">
                                                                         <Input
                                                                             type="number"
-                                                                            value={item.vatRate || ""}
-                                                                            onChange={(e) => updateItem(index, "vatRate", Number(e.target.value) || 0)}
-                                                                            className="text-right border-0 focus:ring-0 focus:border-b focus:border-blue-500 rounded-none px-0 h-9 text-sm w-12 bg-transparent"
+                                                                            value={item.quantity}
+                                                                            onChange={(e) => updateItem(index, "quantity", Number(e.target.value))}
+                                                                            className="text-right border-0 focus:ring-0 focus:border-b focus:border-blue-500 rounded-none px-0 h-9 text-sm w-full bg-transparent"
                                                                         />
-                                                                        <span className="text-sm text-gray-500">%</span>
-                                                                    </div>
-                                                                </td>
+                                                                    </td>
+                                                                )}
+                                                                {quoteData.vatExemptionReason === "none" && (
+                                                                    <td className="py-2 px-4">
+                                                                        <div className="flex items-center justify-end gap-1">
+                                                                            <Input
+                                                                                type="number"
+                                                                                value={item.vatRate || ""}
+                                                                                onChange={(e) => updateItem(index, "vatRate", Number(e.target.value) || 0)}
+                                                                                className="text-right border-0 focus:ring-0 focus:border-b focus:border-blue-500 rounded-none px-0 h-9 text-sm w-12 bg-transparent"
+                                                                            />
+                                                                            <span className="text-sm text-gray-500">%</span>
+                                                                        </div>
+                                                                    </td>
+                                                                )}
                                                                 <td className="py-2 px-4">
                                                                     <div className="flex items-center justify-end">
                                                                         <Input
@@ -750,6 +785,12 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                 <span className="text-muted-foreground">{t("quotes.view.fields.totalVAT")}:</span>
                                                 <span className="font-medium">{quoteData.currency} {totals.totalVAT}</span>
                                             </div>
+                                            {complementaryOptions.globalDiscount && (
+                                                <div className="flex justify-between text-sm text-green-600">
+                                                    <span className="font-semibold">Remise globale:</span>
+                                                    <span className="font-medium">- {quoteData.currency} 0.00</span>
+                                                </div>
+                                            )}
                                             <div className="flex justify-between text-lg font-bold pt-2 border-t border-border">
                                                 <span>{t("quotes.view.fields.totalTTC")}:</span>
                                                 <span>{quoteData.currency} {totals.totalTTC}</span>
@@ -791,12 +832,14 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                         </div>
 
                                         <div className="relative group">
-                                            <Input
-                                                value={quoteData.vatExemptionText}
-                                                onChange={(e) => setQuoteData(prev => ({ ...prev, vatExemptionText: e.target.value }))}
-                                                className="w-full border-dashed border-blue-300 bg-transparent text-blue-800 placeholder:text-blue-300 focus:border-blue-500 focus:ring-0 px-3 py-2 h-auto text-sm transition-all"
-                                                placeholder="Mention légale de TVA..."
-                                            />
+                                            {complementaryOptions.freeField && (
+                                                <Input
+                                                    value={quoteData.vatExemptionText}
+                                                    onChange={(e) => setQuoteData(prev => ({ ...prev, vatExemptionText: e.target.value }))}
+                                                    className="w-full border-dashed border-blue-300 bg-transparent text-blue-800 placeholder:text-blue-300 focus:border-blue-500 focus:ring-0 px-3 py-2 h-auto text-sm transition-all"
+                                                    placeholder="Mention légale de TVA..."
+                                                />
+                                            )}
                                         </div>
                                     </div>
 
