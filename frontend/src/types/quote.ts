@@ -41,7 +41,8 @@ export enum QuoteItemType {
     DAY = "DAY",
     DEPOSIT = "DEPOSIT",
     SERVICE = "SERVICE",
-    PRODUCT = "PRODUCT"
+    PRODUCT = "PRODUCT",
+    SECTION = "SECTION"
 }
 
 export interface QuoteItem {
