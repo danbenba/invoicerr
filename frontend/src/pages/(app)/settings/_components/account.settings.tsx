@@ -1,9 +1,12 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { useEffect, useState } from "react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useEffect, useState, useRef } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Camera } from "lucide-react"
 import { authClient } from "@/lib/auth"
 import { toast } from "sonner"
 import { useForm } from "react-hook-form"
@@ -17,6 +20,10 @@ export default function AccountSettings() {
     const [updateUserLoading, setUpdateUserLoading] = useState(false)
     const [updatePasswordLoading, setUpdatePasswordLoading] = useState(false)
     const [hasCredentialAccount, setHasCredentialAccount] = useState<boolean | null>(null)
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+    const [avatarUploading, setAvatarUploading] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
+    const { data: user } = authClient.useSession()
 
     // Check if user has a credential account (email/password)
     useEffect(() => {
@@ -31,6 +38,7 @@ export default function AccountSettings() {
 
     const profileSchema = z
         .object({
+            salutation: z.enum(['Mr', 'Ms', 'Mrs']).optional().nullable(),
             firstname: z.string().min(1, { message: t("settings.account.form.firstname.errors.required") }),
             lastname: z.string().min(1, { message: t("settings.account.form.lastname.errors.required") }),
             email: z.string().email({ message: t("settings.account.form.email.errors.invalid") }),
@@ -63,11 +71,25 @@ export default function AccountSettings() {
     const profileForm = useForm<z.infer<typeof profileSchema>>({
         resolver: zodResolver(profileSchema),
         defaultValues: {
+            salutation: null,
             firstname: "",
             lastname: "",
             email: "",
         },
     })
+
+    // Load user data into form
+    useEffect(() => {
+        if (user?.user) {
+            profileForm.reset({
+                salutation: (user.user as any).salutation || null,
+                firstname: (user.user as any).firstname || "",
+                lastname: (user.user as any).lastname || "",
+                email: user.user.email || "",
+            })
+            setAvatarPreview(user.user.image || null)
+        }
+    }, [user, profileForm])
 
     const passwordForm = useForm<z.infer<typeof passwordSchema>>({
         resolver: zodResolver(passwordSchema),
@@ -80,22 +102,44 @@ export default function AccountSettings() {
 
     const handleProfileUpdate = async (values: z.infer<typeof profileSchema>) => {
         setUpdateUserLoading(true);
-        authClient.updateUser({
-            // @ts-ignore additional fields
-            firstname: values.firstname,
-            lastname: values.lastname,
-            email: values.email,
-        })
-            .then(() => {
-                toast.success(t("settings.account.messages.profileUpdateSuccess"))
+        
+        // Update via our custom API endpoint that supports salutation
+        try {
+            const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || ''}/api/user/profile`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    salutation: values.salutation,
+                    firstname: values.firstname,
+                    lastname: values.lastname,
+                    email: values.email,
+                }),
             })
-            .catch((error) => {
-                console.error("Error updating profile:", error)
-                toast.error(t("settings.account.messages.profileUpdateError"))
+
+            if (!response.ok) {
+                throw new Error('Failed to update profile')
+            }
+
+            // Also update via better-auth for compatibility
+            await authClient.updateUser({
+                // @ts-ignore additional fields
+                firstname: values.firstname,
+                lastname: values.lastname,
+                email: values.email,
             })
-            .finally(() => {
-                setUpdateUserLoading(false);
-            });
+
+            toast.success(t("settings.account.messages.profileUpdateSuccess"))
+            // Reload to get updated data
+            window.location.reload()
+        } catch (error) {
+            console.error("Error updating profile:", error)
+            toast.error(t("settings.account.messages.profileUpdateError"))
+        } finally {
+            setUpdateUserLoading(false);
+        }
     }
 
     const handlePasswordUpdate = async (values: z.infer<typeof passwordSchema>) => {
@@ -162,6 +206,97 @@ export default function AccountSettings() {
                     <CardContent>
                         <Form {...profileForm}>
                             <form onSubmit={profileForm.handleSubmit(handleProfileUpdate)} className="space-y-4">
+                                <div className="flex flex-col items-center gap-4 mb-4">
+                                    <div className="relative">
+                                        <Avatar className="w-24 h-24">
+                                            <AvatarImage src={avatarPreview || user?.user?.image || ""} />
+                                            <AvatarFallback className="text-2xl">
+                                                {(user?.user as any)?.firstname?.[0] || ""}{(user?.user as any)?.lastname?.[0] || ""}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <Button
+                                            type="button"
+                                            size="icon"
+                                            className="absolute bottom-0 right-0 rounded-full"
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={avatarUploading}
+                                        >
+                                            <Camera className="h-4 w-4" />
+                                        </Button>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={async (e) => {
+                                                const file = e.target.files?.[0]
+                                                if (!file) return
+
+                                                // Preview
+                                                const reader = new FileReader()
+                                                reader.onload = (e) => {
+                                                    setAvatarPreview(e.target?.result as string)
+                                                }
+                                                reader.readAsDataURL(file)
+
+                                                // Upload
+                                                setAvatarUploading(true)
+                                                const formData = new FormData()
+                                                formData.append('image', file)
+
+                                                try {
+                                                    const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || ''}/api/user/avatar`, {
+                                                        method: 'POST',
+                                                        body: formData,
+                                                        credentials: 'include',
+                                                    })
+
+                                                    if (!response.ok) {
+                                                        const errorData = await response.json().catch(() => ({}))
+                                                        throw new Error(errorData.message || 'Upload failed')
+                                                    }
+
+                                                    const result = await response.json()
+                                                    setAvatarPreview(result.image)
+                                                    toast.success(t("settings.account.messages.avatarUpdateSuccess") || "Avatar mis à jour")
+                                                    // Refresh user data
+                                                    setTimeout(() => window.location.reload(), 1000)
+                                                } catch (error) {
+                                                    console.error("Error uploading avatar:", error)
+                                                    toast.error(t("settings.account.messages.avatarUpdateError") || "Erreur lors de la mise à jour de l'avatar")
+                                                    setAvatarPreview(null)
+                                                } finally {
+                                                    setAvatarUploading(false)
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    <p className="text-sm text-muted-foreground text-center">
+                                        {t("settings.account.form.avatar.hint") || "Cliquez sur l'icône pour changer votre photo de profil"}
+                                    </p>
+                                </div>
+                                <FormField
+                                    control={profileForm.control}
+                                    name="salutation"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>{t("settings.account.form.salutation.label") || "Civilité"}</FormLabel>
+                                            <FormControl>
+                                                <Select value={field.value || ""} onValueChange={(value) => field.onChange(value === "" ? null : value)}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder={t("settings.account.form.salutation.placeholder") || "Sélectionner..."} />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Mr">{t("settings.account.form.salutation.mr") || "Mr"}</SelectItem>
+                                                        <SelectItem value="Ms">{t("settings.account.form.salutation.ms") || "Ms"}</SelectItem>
+                                                        <SelectItem value="Mrs">{t("settings.account.form.salutation.mrs") || "Mrs"}</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                                 <FormField
                                     control={profileForm.control}
                                     name="firstname"

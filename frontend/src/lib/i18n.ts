@@ -23,8 +23,9 @@ for (const path in translations) {
 i18n
     .use(
         new LanguageDetector(null, {
-            order: ['navigator'],
-            caches: []
+            order: ['localStorage', 'navigator'],
+            lookupLocalStorage: 'i18nextLng',
+            caches: ['localStorage']
         })
     )
     .use(initReactI18next)

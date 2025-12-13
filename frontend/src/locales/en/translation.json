@@ -1471,7 +1471,10 @@
                 "loginError": "Invalid credentials"
             },
             "oidc": "Sign in with OIDC.",
-            "oidcLink": "OIDC Login"
+            "oidcLink": "OIDC Login",
+            "alreadyConnected": "Already Connected",
+            "alreadyConnectedDescription": "You are already signed in to your account.",
+            "goToDashboard": "Go to Dashboard"
         },
         "signup": {
             "title": "Create Account",

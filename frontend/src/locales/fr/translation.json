@@ -1527,7 +1527,10 @@
                 "loginError": "Identifiants invalides"
             },
             "oidc": "Se connecter avec OIDC.",
-            "oidcLink": "Connexion OIDC"
+            "oidcLink": "Connexion OIDC",
+            "alreadyConnected": "Déjà connecté",
+            "alreadyConnectedDescription": "Vous êtes déjà connecté à votre compte.",
+            "goToDashboard": "Aller au tableau de bord"
         },
         "signup": {
             "title": "Créer un compte",

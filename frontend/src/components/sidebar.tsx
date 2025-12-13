@@ -41,7 +41,7 @@ import { useSse } from "@/hooks/use-fetch"
 import { useTheme } from "./theme-provider"
 import { useTranslation } from "react-i18next"
 
-export function Sidebar() {
+function SidebarInner() {
     const { t } = useTranslation()
     const { open: isOpen } = useSidebar()
     const isMobile = useIsMobile()
@@ -110,7 +110,7 @@ export function Sidebar() {
     }
 
     return (
-        <RootSidebar collapsible="icon">
+        <div className="flex flex-col h-full">
             <OnBoarding isOpen={!companyLoading && (!company || !company.name) && location.pathname !== "/settings/company"} />
 
             <SidebarHeader className="px-2">
@@ -141,7 +141,7 @@ export function Sidebar() {
                                     <Link
                                         data-cy={item.dataCy}
                                         to={item.url}
-                                        className={`flex items-center gap-2 py-6 ${location.pathname.startsWith(item.url) ? "text-sidebar-accent-foreground bg-sidebar-accent" : ""
+                                        className={`flex items-center gap-2 py-6 rounded-xl transition-all ${location.pathname.startsWith(item.url) ? "text-sidebar-accent-foreground bg-sidebar-accent shadow-sm" : "hover:bg-sidebar-accent/50"
                                             }`}
                                     >
                                         {item.icon}
@@ -233,6 +233,14 @@ export function Sidebar() {
                     </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarFooter>
+        </div>
+    )
+}
+
+export function Sidebar() {
+    return (
+        <RootSidebar collapsible="icon" side="left" variant="floating">
+            <SidebarInner />
         </RootSidebar>
     )
 }

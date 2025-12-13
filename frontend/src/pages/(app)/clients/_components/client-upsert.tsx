@@ -43,6 +43,7 @@ export function ClientUpsert({ client, open, onOpenChange, onCreate }: ClientUps
             }, t("clients.upsert.validation.vat.format")),
         currency: z.string().nullable().optional(),
         foundedAt: z.date().optional().refine((date) => !date || date <= new Date(), t("clients.upsert.validation.foundedAt.future")),
+        salutation: z.enum(['Mr', 'Ms', 'Mrs']).optional(),
         contactFirstname: z.string().optional(),
         contactLastname: z.string().optional(),
         contactPhone: z
@@ -93,6 +94,7 @@ export function ClientUpsert({ client, open, onOpenChange, onCreate }: ClientUps
             VAT: "",
             currency: null,
             foundedAt: new Date(),
+            salutation: undefined,
             contactFirstname: "",
             contactLastname: "",
             contactPhone: "",
@@ -118,6 +120,7 @@ export function ClientUpsert({ client, open, onOpenChange, onCreate }: ClientUps
                 VAT: c.VAT || "",
                 currency: c.currency || null,
                 foundedAt: c.foundedAt ? new Date(c.foundedAt) : undefined,
+                salutation: (c as any).salutation || undefined,
                 contactFirstname: c.contactFirstname || "",
                 contactLastname: c.contactLastname || "",
                 contactPhone: c.contactPhone || "",
@@ -136,6 +139,7 @@ export function ClientUpsert({ client, open, onOpenChange, onCreate }: ClientUps
                 VAT: "",
                 currency: null,
                 foundedAt: undefined,
+                salutation: undefined,
                 contactFirstname: "",
                 contactLastname: "",
                 contactPhone: "",
@@ -214,10 +218,33 @@ export function ClientUpsert({ client, open, onOpenChange, onCreate }: ClientUps
                                     )}
                                 />
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <>
                                     <FormField
                                         control={form.control}
-                                        name="contactFirstname"
+                                        name="salutation"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>{t("clients.upsert.fields.salutation.label") || "Civilité"}</FormLabel>
+                                                <FormControl>
+                                                    <Select value={field.value || ""} onValueChange={(value) => field.onChange(value === "" ? undefined : value)}>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder={t("clients.upsert.fields.salutation.placeholder") || "Sélectionner..."} />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="Mr">{t("clients.upsert.fields.salutation.mr") || "Mr"}</SelectItem>
+                                                            <SelectItem value="Ms">{t("clients.upsert.fields.salutation.ms") || "Ms"}</SelectItem>
+                                                            <SelectItem value="Mrs">{t("clients.upsert.fields.salutation.mrs") || "Mrs"}</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="contactFirstname"
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>{t("clients.upsert.fields.contactFirstname.label")}</FormLabel>
@@ -241,7 +268,8 @@ export function ClientUpsert({ client, open, onOpenChange, onCreate }: ClientUps
                                             </FormItem>
                                         )}
                                     />
-                                </div>
+                                    </div>
+                                </>
                             )}
 
                             <FormField

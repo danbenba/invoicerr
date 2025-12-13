@@ -1,0 +1,25 @@
+{
+  "name": "app-desktop",
+  "version": "1.0.0",
+  "description": "Application Electron pour Invoicerr",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "electron",
+    "invoicerr",
+    "desktop"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "electron": "^39.2.7",
+    "electron-store": "^11.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.1"
+  }
+}
