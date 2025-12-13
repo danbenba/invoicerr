@@ -6,7 +6,7 @@ import { useGet, usePost, usePatch } from "@/hooks/use-fetch"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Save, X, Download, Upload, Settings, FileText, User, Languages, AlignLeft, Info } from "lucide-react"
+import { Save, X, Download, Upload, Settings, FileText, User, Languages, AlignLeft, Info, Maximize2, Minimize2 } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslation } from "react-i18next"
 import type { Company, Client } from "@/types"
@@ -134,6 +134,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
     })
 
     const [clientDialogOpen, setClientDialogOpen] = useState(false)
+    const [isFullscreen, setIsFullscreen] = useState(false)
 
     // Initialiser les données
     useEffect(() => {
@@ -278,23 +279,6 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
         }))
     }
 
-    // Ajouter une ligne de désignation (Section)
-    const addSection = () => {
-        setQuoteData(prev => ({
-            ...prev,
-            items: [
-                ...prev.items,
-                {
-                    description: "",
-                    type: QuoteItemType.SECTION,
-                    quantity: 0,
-                    unitPrice: 0,
-                    vatRate: 0,
-                    order: prev.items.length,
-                }
-            ]
-        }))
-    }
 
     // Supprimer une ligne
     const removeItem = (index: number) => {
@@ -395,11 +379,21 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
     return (
         <>
             <div className="min-h-screen bg-background">
-                <main className="flex mx-auto py-6" style={{ gap: '20px', width: '1170px', transition: 'width 300ms' }}>
+                <main className="flex mx-auto py-6" style={{ gap: '20px', width: isFullscreen ? '100%' : '1170px', transition: 'width 300ms', maxWidth: isFullscreen ? '100%' : '1170px' }}>
                     {/* Document Container */}
-                    <div className="flex-1">
-                        <div className="document-wrapper">
-                            <div className="document bg-card border border-border" style={{ width: '900px', minHeight: '1272.86px', margin: '0 auto', padding: '40px' }}>
+                    <div className={`flex-1 ${isFullscreen ? 'fixed inset-0 z-50 bg-background overflow-auto p-6' : ''}`}>
+                        <div className="document-wrapper" style={{ height: isFullscreen ? 'auto' : 'calc(100vh - 100px)', overflowY: 'auto' }}>
+                            <div className={`document bg-card border border-border relative flex flex-col ${isFullscreen ? 'w-full max-w-[1200px] mx-auto' : ''}`} style={{ width: isFullscreen ? '100%' : '900px', minHeight: '1272.86px', margin: '0 auto', padding: '40px' }}>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setIsFullscreen(!isFullscreen)}
+                                    className="absolute top-4 right-4 z-10"
+                                >
+                                    {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                                </Button>
+                                <div className="flex-1">
                                 {/* En-tête du document */}
                                 <div className="mb-8">
                                     <div className="mb-6 group relative w-fit min-h-[5rem]">
@@ -408,7 +402,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                 <img
                                                     src={localCompany.logoB64}
                                                     alt="Logo"
-                                                    className="h-20 w-auto object-contain"
+                                                    className="h-32 w-auto object-contain"
                                                 />
                                                 <Button
                                                     type="button"
@@ -717,7 +711,6 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                     onUpdateItem={updateItem}
                                     onRemoveItem={removeItem}
                                     onAddItem={addItem}
-                                    onAddSection={addSection}
                                 />
 
                                 {/* Totaux */}
@@ -746,9 +739,41 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                     </div>
                                 </div>
 
-                                {/* Bottom Section - TVA & Legal Text */}
-                                <div className="mt-12 space-y-6">
-                                    <div className="grid gap-4">
+                                {/* Signature & Acceptance (Dynamic via Sidebar) */}
+                                {(complementaryOptions.signature || complementaryOptions.acceptance) && (
+                                    <div className="flex justify-between mt-12 px-4 pb-4">
+                                        {complementaryOptions.acceptance && (
+                                            <div className="text-sm text-muted-foreground italic">
+                                                "Bon pour accord"
+                                            </div>
+                                        )}
+                                        {complementaryOptions.signature && (
+                                            <div className="border border-border rounded-lg p-4 w-64 h-32 flex items-center justify-center bg-muted/50 text-muted-foreground text-sm">
+                                                Zone de signature
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Bottom Section - Tout en bas de la feuille avec espacement */}
+                                <div className="mt-auto pt-12 space-y-6" style={{ marginTop: 'auto', paddingTop: '60px', paddingBottom: '40px' }}>
+                                    {/* Footer / Custom Text - Atou Services 21 */}
+                                    {complementaryOptions.freeField && (
+                                        <div className="relative group">
+                                            <div className="absolute -top-6 right-0 text-xs text-muted-foreground">
+                                                {480 - (quoteData.footerText?.length || 0)} caractères restants
+                                            </div>
+                                            <Input
+                                                value={quoteData.footerText}
+                                                onChange={(e) => setQuoteData(prev => ({ ...prev, footerText: e.target.value }))}
+                                                className="w-full text-center border-dashed border-primary/30 text-foreground bg-transparent focus:border-primary focus:ring-0 placeholder:text-muted-foreground text-sm py-2"
+                                                placeholder="Pied de page (ex: Atou Services 21)"
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* TVA Section - Tout en bas */}
+                                    <div className="space-y-4">
                                         <div className="max-w-md">
                                             <Select
                                                 value={quoteData.vatExemptionReason}
@@ -789,41 +814,13 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                             )}
                                         </div>
                                     </div>
-
-                                    {/* Footer / Custom Text - Atou Services 21 */}
-                                    {complementaryOptions.freeField && (
-                                        <div className="pt-8 mt-8 relative group">
-                                            <div className="absolute -top-6 right-0 text-xs text-muted-foreground">
-                                                {480 - (quoteData.footerText?.length || 0)} caractères restants
-                                            </div>
-                                            <Input
-                                                value={quoteData.footerText}
-                                                onChange={(e) => setQuoteData(prev => ({ ...prev, footerText: e.target.value }))}
-                                                className="w-full text-center border-dashed border-primary/30 text-foreground bg-transparent focus:border-primary focus:ring-0 placeholder:text-muted-foreground text-sm py-2"
-                                                placeholder="Pied de page (ex: Atou Services 21)"
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Signature & Acceptance (Dynamic via Sidebar) */}
-                                    {(complementaryOptions.signature || complementaryOptions.acceptance) && (
-                                        <div className="flex justify-between mt-12 px-4 pb-4">
-                                            {complementaryOptions.acceptance && (
-                                                <div className="text-sm text-muted-foreground italic">
-                                                    "Bon pour accord"
-                                                </div>
-                                            )}
-                                            {complementaryOptions.signature && (
-                                                <div className="border border-border rounded-lg p-4 w-64 h-32 flex items-center justify-center bg-muted/50 text-muted-foreground text-sm">
-                                                    Zone de signature
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
                                 </div>
-                            </div >
+                                </div>
+                            </div>
+                        </div>
 
-                            {/* Actions (Footer of Left Column) */}
+                        {/* Actions (Footer of Left Column) */}
+                        {!isFullscreen && (
                             <div className="flex justify-end gap-4 mt-8 no-print pb-8">
                                 <Button
                                     type="button"
@@ -849,9 +846,10 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                     {t("common.actions.save")}
                                 </Button>
                             </div>
-                        </div> {/* Fin Zone principale (Gauche) */}
-
-                        {/* Sidebar Options (Droite) */}
+                        )}
+                    </div>
+                    {/* Sidebar Options (Droite) */}
+                    {!isFullscreen && (
                         <div className="w-[250px] min-w-[250px] shrink-0">
                             <div className="bg-card rounded-lg shadow-sm p-4 border border-border">
                                     <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
@@ -1017,7 +1015,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                 </div>
                             </div>
                         </div>
-                    </div>
+                        )}
                 </main>
             </div>
 

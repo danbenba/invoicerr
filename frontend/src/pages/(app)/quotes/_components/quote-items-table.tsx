@@ -34,7 +34,6 @@ interface QuoteItemsTableProps {
     onUpdateItem: (index: number, field: string, value: any) => void
     onRemoveItem: (index: number) => void
     onAddItem: () => void
-    onAddSection: () => void
 }
 
 function MarkdownToolbar({ 
@@ -135,7 +134,6 @@ export function QuoteItemsTable({
     onUpdateItem,
     onRemoveItem,
     onAddItem,
-    onAddSection,
 }: QuoteItemsTableProps) {
     const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
     const [selectionIndex, setSelectionIndex] = useState<number | null>(null)
@@ -486,30 +484,6 @@ export function QuoteItemsTable({
                     <Plus className="h-4 w-4 mr-2" />
                     Ligne simple
                 </Button>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button
-                            type="button"
-                            variant="outline"
-                            className="border-border text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
-                        >
-                            Ligne de désignation
-                            <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-56 p-1" align="start">
-                        <Button
-                            type="button"
-                            variant="ghost"
-                            className="w-full justify-start font-normal"
-                            onClick={onAddSection}
-                        >
-                            Ajouter une section
-                        </Button>
-                    </PopoverContent>
-                </Popover>
             </div>
         </div>
     )

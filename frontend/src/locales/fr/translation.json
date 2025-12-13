@@ -1592,7 +1592,9 @@
     },
     "common": {
         "actions": {
-            "save": "Enregistrer"
+            "save": "Enregistrer",
+            "cancel": "Annuler",
+            "export": "Exporter"
         },
         "previous": "Précédent",
         "next": "Suivant",
