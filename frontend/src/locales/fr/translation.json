@@ -328,6 +328,41 @@
                 "create": "Créer le devis",
                 "save": "Enregistrer les modifications"
             },
+            "options": {
+                "title": "Options",
+                "billingType": {
+                    "title": "Type de facturation",
+                    "rapid": "Rapide",
+                    "complete": "Complet",
+                    "electronic": "Format électronique"
+                },
+                "client": {
+                    "title": "Client",
+                    "deliveryAddress": "Adresse de livraison",
+                    "siret": "SIREN ou SIRET",
+                    "vat": "N° de TVA intracommunautaire"
+                },
+                "language": {
+                    "title": "Langue",
+                    "french": "Français",
+                    "english": "Anglais"
+                },
+                "complementary": {
+                    "title": "Info complémentaires",
+                    "acceptance": "Conditions d'acceptation",
+                    "signature": "Champ signature",
+                    "title": "Intitulé du document",
+                    "freeField": "Champ libre",
+                    "globalDiscount": "Remise globale"
+                },
+                "preview": {
+                    "title": "Aperçu",
+                    "items": "Articles",
+                    "totalHT": "Total HT",
+                    "totalVAT": "Total TVA",
+                    "totalTTC": "Total TTC"
+                }
+            },
             "messages": {
                 "createSuccess": "Devis créé avec succès",
                 "createError": "Échec de la création du devis",

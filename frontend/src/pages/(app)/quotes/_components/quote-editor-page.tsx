@@ -62,21 +62,52 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
     })
     const [openClientSearch, setOpenClientSearch] = useState(false)
 
-    // Sidebar Options State
-    const [billingType, setBillingType] = useState("COMPLET")
-    const [clientOptions, setClientOptions] = useState({
-        deliveryAddress: true,
-        siret: true,
-        vat: true
-    })
-    const [language, setLanguage] = useState("fr")
-    const [complementaryOptions, setComplementaryOptions] = useState({
-        acceptance: true,
-        signature: true,
-        title: true,
-        freeField: true,
-        globalDiscount: true
-    })
+    // Sidebar Options State - Load from localStorage or defaults
+    const loadOptionsFromStorage = () => {
+        const stored = localStorage.getItem('quoteEditorOptions')
+        if (stored) {
+            try {
+                return JSON.parse(stored)
+            } catch (e) {
+                console.error('Failed to parse stored options', e)
+            }
+        }
+        return null
+    }
+
+    const defaultOptions = {
+        billingType: "COMPLET",
+        clientOptions: {
+            deliveryAddress: true,
+            siret: true,
+            vat: true
+        },
+        language: "fr",
+        complementaryOptions: {
+            acceptance: true,
+            signature: true,
+            title: true,
+            freeField: true,
+            globalDiscount: false
+        }
+    }
+
+    const storedOptions = loadOptionsFromStorage()
+    const [billingType, setBillingType] = useState(storedOptions?.billingType || defaultOptions.billingType)
+    const [clientOptions, setClientOptions] = useState(storedOptions?.clientOptions || defaultOptions.clientOptions)
+    const [language, setLanguage] = useState(storedOptions?.language || defaultOptions.language)
+    const [complementaryOptions, setComplementaryOptions] = useState(storedOptions?.complementaryOptions || defaultOptions.complementaryOptions)
+
+    // Save options to localStorage whenever they change
+    useEffect(() => {
+        const optionsToSave = {
+            billingType,
+            clientOptions,
+            language,
+            complementaryOptions
+        }
+        localStorage.setItem('quoteEditorOptions', JSON.stringify(optionsToSave))
+    }, [billingType, clientOptions, language, complementaryOptions])
 
     const [quoteData, setQuoteData] = useState({
         title: "",
@@ -554,13 +585,13 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                             value={localClient.postalCode}
                                                             onChange={(e) => setLocalClient(prev => ({ ...prev, postalCode: e.target.value }))}
                                                             placeholder="Code postal"
-                                                            className="text-sm italic text-blue-400 placeholder:text-blue-300 border-0 p-0 h-auto focus-visible:ring-0 bg-transparent w-20"
+                                                            className="text-sm italic text-muted-foreground placeholder:text-muted-foreground/50 border-0 p-0 h-auto focus-visible:ring-0 bg-transparent w-20"
                                                         />
                                                         <Input
                                                             value={localClient.city}
                                                             onChange={(e) => setLocalClient(prev => ({ ...prev, city: e.target.value }))}
                                                             placeholder="Ville"
-                                                            className="text-sm italic text-blue-400 placeholder:text-blue-300 border-0 p-0 h-auto focus-visible:ring-0 bg-transparent flex-1"
+                                                            className="text-sm italic text-muted-foreground placeholder:text-muted-foreground/50 border-0 p-0 h-auto focus-visible:ring-0 bg-transparent flex-1"
                                                         />
                                                     </div>
                                                     <Input
@@ -569,6 +600,26 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                         placeholder="Pays"
                                                         className="text-sm italic text-muted-foreground placeholder:text-muted-foreground/50 border-0 p-0 h-auto focus-visible:ring-0 bg-transparent"
                                                     />
+                                                    {clientOptions.deliveryAddress && (
+                                                        <div className="mt-2 pt-2 border-t border-primary/20">
+                                                            <Input
+                                                                value={localClient.complement}
+                                                                onChange={(e) => setLocalClient(prev => ({ ...prev, complement: e.target.value }))}
+                                                                placeholder="Adresse de livraison"
+                                                                className="text-xs italic text-muted-foreground/70 placeholder:text-muted-foreground/50 border-0 p-0 h-auto focus-visible:ring-0 bg-transparent"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    {clientOptions.siret && selectedClient?.legalId && (
+                                                        <div className="mt-1 text-xs text-muted-foreground">
+                                                            SIRET: {selectedClient.legalId}
+                                                        </div>
+                                                    )}
+                                                    {clientOptions.vat && selectedClient?.VAT && (
+                                                        <div className="mt-1 text-xs text-muted-foreground">
+                                                            TVA: {selectedClient.VAT}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -579,8 +630,13 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                 <div className="flex items-end justify-between mb-8">
                                     <div className="flex-1">
                                         <span className="text-xl font-medium text-foreground">
-                                            {(pdfConfig?.labels?.quote || "Devis") + (quote?.number ? ` N° ${quote.rawNumber || quote.number}` : "")}
+                                            {pdfConfig?.labels?.quote || "Devis"}
                                         </span>
+                                        {quote?.number && (
+                                            <span className="text-xl font-medium text-foreground ml-2">
+                                                N° {quote.rawNumber || quote.number}
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="flex items-end gap-4">
                                         <div>
@@ -683,100 +739,98 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                             </thead>
                                             <tbody className="bg-white">
                                                 {quoteData.items.map((item, index) => (
-                                                    <tr key={index} className="border-b border-dashed border-border group hover:bg-muted/50">
-                                                        {item.type === QuoteItemType.SECTION ? (
-                                                            <>
-                                                                <td className="py-2 px-4" colSpan={billingType === "COMPLET" ? (quoteData.vatExemptionReason === "none" ? 6 : 5) : (quoteData.vatExemptionReason === "none" ? 4 : 3)}>
+                                                    item.type === QuoteItemType.SECTION ? (
+                                                        <tr key={index} className="border-b-2 border-primary/20 group">
+                                                            <td className="py-4 px-4 bg-primary/5" colSpan={billingType === "COMPLET" ? (quoteData.vatExemptionReason === "none" ? 6 : 5) : (quoteData.vatExemptionReason === "none" ? 4 : 3)}>
+                                                                <div className="flex items-center gap-2">
                                                                     <Input
                                                                         value={item.description}
                                                                         onChange={(e) => updateItem(index, "description", e.target.value)}
                                                                         placeholder="Titre de la section / Désignation"
-                                                                        className="border-0 focus:ring-0 rounded-none px-0 h-9 text-base font-bold text-primary italic w-full bg-transparent placeholder:text-primary/50"
+                                                                        className="border-0 focus:ring-0 rounded-none px-0 h-auto text-lg font-bold text-primary italic w-full bg-transparent placeholder:text-primary/50 py-2"
                                                                     />
-                                                                </td>
-                                                                <td className="py-2 px-2 text-right">
                                                                     <Button
                                                                         type="button"
                                                                         variant="ghost"
                                                                         size="icon"
                                                                         onClick={() => removeItem(index)}
-                                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
+                                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all shrink-0"
                                                                     >
                                                                         <X className="h-4 w-4" />
                                                                     </Button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ) : (
+                                                        <tr key={index} className="border-b border-dashed border-border group hover:bg-muted/50">
+                                                            {billingType === "COMPLET" && (
+                                                                <td className="py-2 px-4">
+                                                                    <Select value={item.type || "SERVICE"} onValueChange={(val) => updateItem(index, "type", val)}>
+                                                                        <SelectTrigger className="border-0 h-9 p-0 focus:ring-0 focus:border-b focus:border-primary rounded-none">
+                                                                            <SelectValue />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            <SelectItem value="SERVICE">Prestation</SelectItem>
+                                                                            <SelectItem value="GOOD">Bien</SelectItem>
+                                                                        </SelectContent>
+                                                                    </Select>
                                                                 </td>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                {billingType === "COMPLET" && (
-                                                                    <td className="py-2 px-4">
-                                                                        <Select value={item.type || "SERVICE"} onValueChange={(val) => updateItem(index, "type", val)}>
-                                                                            <SelectTrigger className="border-0 h-9 p-0 focus:ring-0 focus:border-b focus:border-blue-500 rounded-none">
-                                                                                <SelectValue />
-                                                                            </SelectTrigger>
-                                                                            <SelectContent>
-                                                                                <SelectItem value="SERVICE">Prestation</SelectItem>
-                                                                                <SelectItem value="GOOD">Bien</SelectItem>
-                                                                            </SelectContent>
-                                                                        </Select>
-                                                                    </td>
-                                                                )}
+                                                            )}
+                                                            <td className="py-2 px-4">
+                                                                <Input
+                                                                    value={item.description}
+                                                                    onChange={(e) => updateItem(index, "description", e.target.value)}
+                                                                    placeholder="Description"
+                                                                    className="border-0 focus:ring-0 focus:border-b focus:border-primary rounded-none px-0 h-9 text-sm w-full bg-transparent"
+                                                                />
+                                                            </td>
+                                                            {billingType === "COMPLET" && (
                                                                 <td className="py-2 px-4">
                                                                     <Input
-                                                                        value={item.description}
-                                                                        onChange={(e) => updateItem(index, "description", e.target.value)}
-                                                                        placeholder="Description"
-                                                                        className="border-0 focus:ring-0 focus:border-b focus:border-blue-500 rounded-none px-0 h-9 text-sm w-full bg-transparent"
+                                                                        type="number"
+                                                                        value={item.quantity}
+                                                                        onChange={(e) => updateItem(index, "quantity", Number(e.target.value))}
+                                                                        className="text-right border-0 focus:ring-0 focus:border-b focus:border-primary rounded-none px-0 h-9 text-sm w-full bg-transparent"
                                                                     />
                                                                 </td>
-                                                                {billingType === "COMPLET" && (
-                                                                    <td className="py-2 px-4">
-                                                                        <Input
-                                                                            type="number"
-                                                                            value={item.quantity}
-                                                                            onChange={(e) => updateItem(index, "quantity", Number(e.target.value))}
-                                                                            className="text-right border-0 focus:ring-0 focus:border-b focus:border-primary rounded-none px-0 h-9 text-sm w-full bg-transparent"
-                                                                        />
-                                                                    </td>
-                                                                )}
-                                                                {quoteData.vatExemptionReason === "none" && (
-                                                                    <td className="py-2 px-4">
-                                                                        <div className="flex items-center justify-end gap-1">
-                                                                            <Input
-                                                                                type="number"
-                                                                                value={item.vatRate || ""}
-                                                                                onChange={(e) => updateItem(index, "vatRate", Number(e.target.value) || 0)}
-                                                                                className="text-right border-0 focus:ring-0 focus:border-b focus:border-primary rounded-none px-0 h-9 text-sm w-12 bg-transparent"
-                                                                            />
-                                                                            <span className="text-sm text-muted-foreground">%</span>
-                                                                        </div>
-                                                                    </td>
-                                                                )}
+                                                            )}
+                                                            {quoteData.vatExemptionReason === "none" && (
                                                                 <td className="py-2 px-4">
-                                                                    <div className="flex items-center justify-end">
+                                                                    <div className="flex items-center justify-end gap-1">
                                                                         <Input
                                                                             type="number"
-                                                                            step="0.01"
-                                                                            value={item.unitPrice || ""}
-                                                                            onChange={(e) => updateItem(index, "unitPrice", Number(e.target.value) || 0)}
-                                                                            className="text-right border-0 focus:ring-0 focus:border-b focus:border-blue-500 rounded-none px-0 h-9 text-sm w-full bg-transparent font-medium"
+                                                                            value={item.vatRate || ""}
+                                                                            onChange={(e) => updateItem(index, "vatRate", Number(e.target.value) || 0)}
+                                                                            className="text-right border-0 focus:ring-0 focus:border-b focus:border-primary rounded-none px-0 h-9 text-sm w-12 bg-transparent"
                                                                         />
+                                                                        <span className="text-sm text-muted-foreground">%</span>
                                                                     </div>
                                                                 </td>
-                                                                <td className="py-2 px-2 text-right">
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        onClick={() => removeItem(index)}
-                                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
-                                                                    >
-                                                                        <X className="h-4 w-4" />
-                                                                    </Button>
-                                                                </td>
-                                                            </>
-                                                        )}
-                                                    </tr>
+                                                            )}
+                                                            <td className="py-2 px-4">
+                                                                <div className="flex items-center justify-end">
+                                                                    <Input
+                                                                        type="number"
+                                                                        step="0.01"
+                                                                        value={item.unitPrice || ""}
+                                                                        onChange={(e) => updateItem(index, "unitPrice", Number(e.target.value) || 0)}
+                                                                        className="text-right border-0 focus:ring-0 focus:border-b focus:border-primary rounded-none px-0 h-9 text-sm w-full bg-transparent font-medium"
+                                                                    />
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-2 px-2 text-right">
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => removeItem(index)}
+                                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
+                                                                >
+                                                                    <X className="h-4 w-4" />
+                                                                </Button>
+                                                            </td>
+                                                        </tr>
+                                                    )
                                                 ))}
                                             </tbody>
                                         </table>
@@ -862,7 +916,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                         </div>
 
                                         <div className="relative group">
-                                            {complementaryOptions.freeField && (
+                                            {quoteData.vatExemptionReason !== "none" && (
                                                 <Input
                                                     value={quoteData.vatExemptionText}
                                                     onChange={(e) => setQuoteData(prev => ({ ...prev, vatExemptionText: e.target.value }))}
@@ -873,18 +927,20 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                         </div>
                                     </div>
 
-                                    {/* Footer / Custom Text */}
-                                    <div className="pt-8 mt-8 relative group">
-                                        <div className="absolute -top-6 right-0 text-xs text-muted-foreground">
-                                            {480 - (quoteData.footerText?.length || 0)} caractères restants
+                                    {/* Footer / Custom Text - Atou Services 21 */}
+                                    {complementaryOptions.freeField && (
+                                        <div className="pt-8 mt-8 relative group">
+                                            <div className="absolute -top-6 right-0 text-xs text-muted-foreground">
+                                                {480 - (quoteData.footerText?.length || 0)} caractères restants
+                                            </div>
+                                            <Input
+                                                value={quoteData.footerText}
+                                                onChange={(e) => setQuoteData(prev => ({ ...prev, footerText: e.target.value }))}
+                                                className="w-full text-center border-dashed border-primary/30 text-foreground bg-transparent focus:border-primary focus:ring-0 placeholder:text-muted-foreground text-sm py-2"
+                                                placeholder="Pied de page (ex: Atou Services 21)"
+                                            />
                                         </div>
-                                        <Input
-                                            value={quoteData.footerText}
-                                            onChange={(e) => setQuoteData(prev => ({ ...prev, footerText: e.target.value }))}
-                                            className="w-full text-center border-dashed border-primary/30 text-foreground bg-transparent focus:border-primary focus:ring-0 placeholder:text-muted-foreground text-sm py-2"
-                                            placeholder="Pied de page (ex: Atou Services 21)"
-                                        />
-                                    </div>
+                                    )}
 
                                     {/* Signature & Acceptance (Dynamic via Sidebar) */}
                                     {(complementaryOptions.signature || complementaryOptions.acceptance) && (
@@ -1094,6 +1150,32 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                             />
                                             <span className="text-sm text-foreground">Remise globale</span>
                                         </label>
+                                    </div>
+                                </div>
+
+                                {/* Aperçu */}
+                                <div className="mt-6 pt-6 border-t border-border">
+                                    <div className="flex items-center gap-2 mb-3 text-primary font-semibold text-sm">
+                                        <FileText className="h-4 w-4" />
+                                        {t("quotes.upsert.options.preview.title") || "Aperçu"}
+                                    </div>
+                                    <div className="space-y-2 pl-2">
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-muted-foreground">{t("quotes.upsert.options.preview.items") || "Articles"}:</span>
+                                            <span className="font-medium text-foreground">{quoteData.items.filter(i => i.type !== QuoteItemType.SECTION).length}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-muted-foreground">{t("quotes.upsert.options.preview.totalHT") || "Total HT"}:</span>
+                                            <span className="font-medium text-foreground">{quoteData.currency} {totals.totalHT}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                            <span className="text-muted-foreground">{t("quotes.upsert.options.preview.totalVAT") || "Total TVA"}:</span>
+                                            <span className="font-medium text-foreground">{quoteData.currency} {totals.totalVAT}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm pt-2 border-t border-border">
+                                            <span className="font-semibold text-foreground">{t("quotes.upsert.options.preview.totalTTC") || "Total TTC"}:</span>
+                                            <span className="font-bold text-primary">{quoteData.currency} {totals.totalTTC}</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
