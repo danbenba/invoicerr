@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import type React from "react";
 import { authClient } from "@/lib/auth";
 import { toast } from "sonner";
-import { useNavigate } from "react-router";
+import { Navigate, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
 
 type SignupFormData = {
@@ -32,6 +32,7 @@ type SignupFormData = {
 export default function SignupPage() {
     const { t } = useTranslation();
     const navigate = useNavigate();
+    const { data: session, isPending: sessionPending } = authClient.useSession();
     const [errors, setErrors] = useState<
         Partial<Record<keyof SignupFormData, string[]>>
     >({});
@@ -149,6 +150,15 @@ export default function SignupPage() {
             callbackURL: "/dashboard",
         });
     };
+
+    // Redirect to dashboard if already logged in
+    if (sessionPending) {
+        return null;
+    }
+
+    if (session) {
+        return <Navigate to="/dashboard" replace />;
+    }
 
     if (checkingInvitation) {
         return (

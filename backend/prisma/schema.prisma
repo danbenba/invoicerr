@@ -234,6 +234,7 @@ enum ItemType {
   DEPOSIT
   SERVICE
   PRODUCT
+  SECTION
 }
 
 // Payment method types

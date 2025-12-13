@@ -62,17 +62,17 @@ export class UserService {
         const updatedUser = await this.prisma.user.update({
             where: { id: userId },
             data: updateData,
-            select: {
-                id: true,
-                firstname: true,
-                lastname: true,
-                email: true,
-                image: true,
-                salutation: true,
-            },
         });
 
-        return updatedUser;
+        // Return only the fields we need
+        return {
+            id: updatedUser.id,
+            firstname: updatedUser.firstname,
+            lastname: updatedUser.lastname,
+            email: updatedUser.email,
+            image: updatedUser.image,
+            salutation: (updatedUser as any).salutation,
+        };
     }
 }
 

@@ -1,8 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
     EyeClosedIcon,
-    EyeIcon,
-    ArrowRight
+    EyeIcon
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -13,11 +12,10 @@ import { authClient } from "@/lib/auth"
 import { toast } from "sonner"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
-import { Navigate, useNavigate } from "react-router"
+import { Navigate } from "react-router"
 
 export default function LoginPage() {
     const { t } = useTranslation()
-    const navigate = useNavigate()
 
     const { data: session, isPending } = authClient.useSession()
 
@@ -67,27 +65,9 @@ export default function LoginPage() {
         return null;
     }
 
+    // Redirect to dashboard if already logged in
     if (session) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <Card className="w-full max-w-sm md:max-w-md">
-                    <CardHeader>
-                        <CardTitle className="text-2xl text-center">{t("auth.login.alreadyConnected")}</CardTitle>
-                        <CardDescription className="text-center">{t("auth.login.alreadyConnectedDescription")}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Button 
-                            className="w-full" 
-                            onClick={() => navigate("/dashboard")}
-                            data-cy="auth-go-to-dashboard-btn"
-                        >
-                            {t("auth.login.goToDashboard")}
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                        </Button>
-                    </CardContent>
-                </Card>
-            </div>
-        );
+        return <Navigate to="/dashboard" replace />;
     }
 
     return (
