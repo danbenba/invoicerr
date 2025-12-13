@@ -1,5 +1,6 @@
 import type { Client, Invoice, PaymentMethod, Quote } from "@/types"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
 import { DndContext, MouseSensor, TouchSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { GripVertical, Plus, Trash2 } from "lucide-react"
@@ -351,8 +352,8 @@ export function InvoiceUpsert({ invoice, open, onOpenChange }: InvoiceUpsertDial
                             />
 
 
-                            <FormItem>
-                                <FormLabel>{t("invoices.upsert.form.items.label")}</FormLabel>
+                            <div className="space-y-2">
+                                <Label className="text-sm font-medium">{t("invoices.upsert.form.items.label")}</Label>
                                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
                                     <SortableContext items={fields.map((f) => f.id)} strategy={verticalListSortingStrategy}>
                                         <div className="space-y-2">
@@ -509,7 +510,7 @@ export function InvoiceUpsert({ invoice, open, onOpenChange }: InvoiceUpsertDial
                                     <Plus className="mr-2 h-4 w-4" />
                                     {t("invoices.upsert.form.items.addItem")}
                                 </Button>
-                            </FormItem>
+                            </div>
 
                             <div className="flex justify-end space-x-2">
                                 <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

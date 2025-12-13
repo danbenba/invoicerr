@@ -79,3 +79,29 @@ export class EditCompanyDto {
     receiptStartingNumber: number
     receiptNumberFormat: string
 }
+
+export interface QuoteSettingsDto {
+    defaultDate?: Date | string
+    defaultFooterText?: string
+    defaultBillingType?: "RAPIDE" | "COMPLET" | "ELECTRONIC"
+    defaultClientOptions?: {
+        deliveryAddress: boolean
+        siret: boolean
+        vat: boolean
+    }
+    defaultComplementaryOptions?: {
+        acceptance: boolean
+        signature: boolean
+        title: boolean
+        freeField: boolean
+        globalDiscount: boolean
+    }
+    primaryColor?: string
+    secondaryColor?: string
+    tableTextColor?: string
+    elementPlacement?: {
+        logoPosition?: "left" | "center" | "right"
+        clientInfoPosition?: "left" | "right"
+        totalsPosition?: "left" | "right"
+    }
+}

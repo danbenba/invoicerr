@@ -326,6 +326,8 @@ model Company {
 
   dateFormat String @default("dd/MM/yyyy") // Date format for quotes and invoices
 
+  quoteSettings Json? // Settings for quotes (default options, colors, placement, etc.)
+
   pDFConfigId      String             @unique
   pdfConfig        PDFConfig          @relation(fields: [pDFConfigId], references: [id])
   Quote            Quote[]
@@ -401,6 +403,12 @@ model Quote {
   paymentDetails  String? // Details for the payment method (e.g., bank account number)
   paymentMethodId String?
   notes           String?     @default("")
+  vatExemptionReason String?
+  vatExemptionText   String?
+  footerText         String?
+  billingType        String?
+  clientOptions      String? // JSON string
+  complementaryOptions String? // JSON string
   isActive        Boolean     @default(true)
   Invoice         Invoice[]
   signatures      Signature[]

@@ -1,5 +1,5 @@
 import { CompanyService } from '@/modules/company/company.service';
-import { EditCompanyDto, PDFConfigDto } from '@/modules/company/dto/company.dto';
+import { EditCompanyDto, PDFConfigDto, QuoteSettingsDto } from '@/modules/company/dto/company.dto';
 import { Body, Controller, Get, Post, Put, Sse } from '@nestjs/common';
 import { from, interval, map, startWith, switchMap } from 'rxjs';
 
@@ -56,6 +56,18 @@ export class CompanyController {
       body.subject,
       body.body,
     );
+    return data || {};
+  }
+
+  @Get('quote-settings')
+  async getQuoteSettings() {
+    const data = await this.companyService.getQuoteSettings();
+    return data || {};
+  }
+
+  @Post('quote-settings')
+  async postQuoteSettings(@Body() body: QuoteSettingsDto) {
+    const data = await this.companyService.editQuoteSettings(body);
     return data || {};
   }
 }

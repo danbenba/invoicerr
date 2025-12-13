@@ -34,6 +34,12 @@ export interface Quote {
     paymentMethodId?: string;
     paymentMethod?: PaymentMethod;
     isActive: boolean;
+    vatExemptionReason?: string;
+    vatExemptionText?: string;
+    footerText?: string;
+    billingType?: string;
+    clientOptions?: string; // JSON string for client options
+    complementaryOptions?: string; // JSON string for complementary options
 }
 
 export enum QuoteItemType {

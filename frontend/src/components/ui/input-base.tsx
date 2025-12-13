@@ -21,7 +21,7 @@ const InputBaseContext = React.createContext<InputBaseContextProps>({
   autoFocus: false,
   controlRef: { current: null },
   disabled: false,
-  onFocusedChange: () => {},
+  onFocusedChange: () => { },
 });
 
 function useInputBase() {
@@ -74,7 +74,7 @@ function InputBase({
           disabled && "pointer-events-none cursor-not-allowed opacity-50",
           focused && "border-ring ring-ring/50 ring-[3px]",
           error &&
-            "ring-destructive/20 dark:ring-destructive/40 border-destructive",
+          "ring-destructive/20 dark:ring-destructive/40 border-destructive",
           className,
         )}
         {...props}
@@ -169,13 +169,14 @@ function InputBaseAdornmentButton({
   );
 }
 
-function InputBaseInput({
-  className,
-  ...props
-}: React.ComponentProps<typeof Primitive.input>) {
+const InputBaseInput = React.forwardRef<
+  HTMLInputElement,
+  React.ComponentProps<typeof Primitive.input>
+>(({ className, ...props }, ref) => {
   return (
     <Primitive.input
       data-slot="input-base-input"
+      ref={ref}
       className={cn(
         "placeholder:text-muted-foreground file:text-foreground w-full flex-1 bg-transparent file:border-0 file:bg-transparent file:text-sm file:font-medium focus:outline-none disabled:pointer-events-none",
         className,
@@ -183,7 +184,8 @@ function InputBaseInput({
       {...props}
     />
   );
-}
+});
+InputBaseInput.displayName = "InputBaseInput";
 
 function InputBaseTextarea({
   className,

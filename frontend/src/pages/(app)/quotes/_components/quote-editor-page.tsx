@@ -9,15 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Save, X, Download, Upload, Plus, Settings, FileText, User, Languages, AlignLeft, Info } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslation } from "react-i18next"
-import type { Company, Client, PaymentMethod } from "@/types"
+import type { Company, Client } from "@/types"
 import { QuoteItemType } from "@/types"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Calendar } from "@/components/ui/calendar"
-import { CalendarIcon } from "lucide-react"
-import { format } from "date-fns"
-import CurrencySelect from "@/components/currency-select"
 import { ClientUpsert } from "../../clients/_components/client-upsert"
+import { DatePicker } from "@/components/date-picker"
 
 interface QuoteEditorPageProps {
     quoteId?: string
@@ -89,7 +87,8 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
         paymentMethodId: "",
         vatExemptionReason: "not_subject",
         vatExemptionText: "TVA non applicable, art. 293 B du CGI",
-        footerText: "- Atou Services 21 -",
+        footerText: "Atou Services 21",
+        createdAt: new Date(),
         items: [] as Array<{
             id?: string
             description: string
@@ -124,16 +123,33 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
 
     useEffect(() => {
         if (isEdit && quote) {
+            if (quote.billingType) setBillingType(quote.billingType)
+            if (quote.clientOptions) {
+                try {
+                    setClientOptions(JSON.parse(quote.clientOptions))
+                } catch (e) {
+                    console.error("Failed to parse client options", e)
+                }
+            }
+            if (quote.complementaryOptions) {
+                try {
+                    setComplementaryOptions(JSON.parse(quote.complementaryOptions))
+                } catch (e) {
+                    console.error("Failed to parse complementary options", e)
+                }
+            }
+
             setQuoteData({
                 title: quote.title || "",
                 clientId: quote.clientId || "",
                 currency: quote.currency || "EUR",
                 validUntil: quote.validUntil ? new Date(quote.validUntil) : null,
+                createdAt: quote.createdAt ? new Date(quote.createdAt) : new Date(),
                 notes: quote.notes || "",
                 paymentMethodId: quote.paymentMethodId || "",
                 vatExemptionReason: quote.vatExemptionReason || "not_subject",
                 vatExemptionText: quote.vatExemptionText || "TVA non applicable, art. 293 B du CGI",
-                footerText: quote.footerText || "- Atou Services 21 -",
+                footerText: quote.footerText || "Atou Services 21",
                 items: quote.items
                     .sort((a: any, b: any) => a.order - b.order)
                     .map((item: any) => ({
@@ -265,7 +281,11 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
 
         const data = {
             ...quoteData,
+            billingType,
+            clientOptions: JSON.stringify(clientOptions),
+            complementaryOptions: JSON.stringify(complementaryOptions),
             validUntil: quoteData.validUntil,
+            createdAt: quoteData.createdAt, // Save date
             items: quoteData.items.map((item, index) => ({
                 ...item,
                 order: index,
@@ -325,19 +345,24 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
         setSearchTerm("")
     }
 
+    const handleLanguageChange = (lang: string) => {
+        setLanguage(lang)
+        i18n.changeLanguage(lang)
+    }
+
     return (
         <>
-            <div className="min-h-screen bg-slate-900 py-8 text-slate-900">
+            <div className="min-h-screen bg-background py-8">
                 <div className="max-w-[1400px] mx-auto px-6">
                     {/* En-tête de navigation */}
-                    <div className="flex items-center justify-between mb-6 text-white">
+                    <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-4">
                             <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => navigate("/quotes")}
-                                className="h-8 w-8 text-white hover:bg-slate-800"
+                                className="h-8 w-8 hover:bg-muted"
                             >
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>
@@ -350,7 +375,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                     <div className="flex gap-8 items-start">
                         {/* Zone Principale (Document) */}
                         <div className="flex-1 min-w-0">
-                            <div className="bg-white rounded-lg shadow-xl p-8 min-h-[1000px] print:shadow-none print:p-0">
+                            <div className="bg-card rounded-lg shadow-lg border border-border p-8 min-h-[1000px] print:shadow-none print:p-0">
                                 {/* En-tête du document */}
                                 <div className="mb-8">
                                     <div className="mb-6 group relative w-fit min-h-[5rem]">
@@ -462,7 +487,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                             </div>
                                         </div>
                                         <div className="flex-1 max-w-[45%] text-left">
-                                            <div className="border border-dashed border-blue-200 bg-blue-50/50 p-4 rounded-lg group hover:border-blue-300 transition-colors">
+                                            <div className="border border-dashed border-primary/30 bg-primary/5 p-4 rounded-lg group hover:border-primary/50 transition-colors">
                                                 <div className="mb-2">
                                                     <Popover open={openClientSearch} onOpenChange={setOpenClientSearch}>
                                                         <PopoverTrigger asChild>
@@ -471,7 +496,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                                     value={localClient.name}
                                                                     onChange={(e) => setLocalClient(prev => ({ ...prev, name: e.target.value }))}
                                                                     placeholder="Nom du client"
-                                                                    className="text-lg font-style-italic text-red-500 placeholder:text-red-300 border-0 p-0 h-auto focus-visible:ring-0 bg-transparent cursor-pointer font-medium"
+                                                                    className="text-lg font-style-italic text-primary placeholder:text-primary/50 border-0 p-0 h-auto focus-visible:ring-0 bg-transparent cursor-pointer font-medium"
                                                                 />
                                                             </div>
                                                         </PopoverTrigger>
@@ -516,13 +541,13 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                         value={localClient.address}
                                                         onChange={(e) => setLocalClient(prev => ({ ...prev, address: e.target.value }))}
                                                         placeholder="Adresse postale"
-                                                        className="text-sm italic text-blue-400 placeholder:text-blue-300 border-0 p-0 h-auto focus-visible:ring-0 bg-transparent"
+                                                        className="text-sm italic text-muted-foreground placeholder:text-muted-foreground/50 border-0 p-0 h-auto focus-visible:ring-0 bg-transparent"
                                                     />
                                                     <Input
                                                         value={localClient.complement}
                                                         onChange={(e) => setLocalClient(prev => ({ ...prev, complement: e.target.value }))}
                                                         placeholder="Complément d'adresse"
-                                                        className="text-sm italic text-blue-400 placeholder:text-blue-300 border-0 p-0 h-auto focus-visible:ring-0 bg-transparent"
+                                                        className="text-sm italic text-muted-foreground placeholder:text-muted-foreground/50 border-0 p-0 h-auto focus-visible:ring-0 bg-transparent"
                                                     />
                                                     <div className="flex gap-1">
                                                         <Input
@@ -542,7 +567,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                         value={localClient.country}
                                                         onChange={(e) => setLocalClient(prev => ({ ...prev, country: e.target.value }))}
                                                         placeholder="Pays"
-                                                        className="text-sm italic text-blue-400 placeholder:text-blue-300 border-0 p-0 h-auto focus-visible:ring-0 bg-transparent"
+                                                        className="text-sm italic text-muted-foreground placeholder:text-muted-foreground/50 border-0 p-0 h-auto focus-visible:ring-0 bg-transparent"
                                                     />
                                                 </div>
                                             </div>
@@ -553,21 +578,26 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                 {/* Nouvelle ligne de métadonnées (Devis, Date, Validité) */}
                                 <div className="flex items-end justify-between mb-8">
                                     <div className="flex-1">
-                                        <span className="text-xl font-medium text-blue-900">{pdfConfig?.labels?.quote || "Devis"}</span>
+                                        <span className="text-xl font-medium text-foreground">
+                                            {(pdfConfig?.labels?.quote || "Devis") + (quote?.number ? ` N° ${quote.rawNumber || quote.number}` : "")}
+                                        </span>
                                     </div>
                                     <div className="flex items-end gap-4">
                                         <div>
-                                            <label className="text-xs text-blue-400 mb-1 block uppercase font-medium">Date d'émission</label>
-                                            <div className="border border-blue-200 rounded-md bg-white flex items-center px-3 py-1.5 min-w-[140px]">
-                                                <span className="flex-1 text-sm text-blue-900">{format(new Date(), "dd/MM/yyyy")}</span>
-                                                <CalendarIcon className="h-4 w-4 text-blue-900" />
+                                            <label className="text-xs text-muted-foreground mb-1 block uppercase font-medium">Date d'émission</label>
+                                            <div className="min-w-[140px]">
+                                                <DatePicker
+                                                    value={quoteData.createdAt}
+                                                    onChange={(date) => setQuoteData(prev => ({ ...prev, createdAt: date || new Date() }))}
+                                                    className="w-full"
+                                                />
                                             </div>
                                         </div>
                                         <div>
                                             <Popover>
                                                 <PopoverTrigger asChild>
-                                                    <div className="border border-dashed border-blue-300 rounded-md px-3 py-1.5 min-w-[200px] cursor-pointer hover:bg-blue-50 transition-colors h-[38px] flex items-center">
-                                                        <span className="text-sm text-blue-700">
+                                                    <div className="border border-dashed border-primary/30 rounded-md px-3 py-1.5 min-w-[200px] cursor-pointer hover:bg-primary/5 transition-colors h-[38px] flex items-center">
+                                                        <span className="text-sm text-foreground">
                                                             Période de validité : {quoteData.validUntil ?
                                                                 Math.ceil((new Date(quoteData.validUntil).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) + " jours"
                                                                 : "---"}
@@ -626,16 +656,16 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                             value={quoteData.title}
                                             onChange={(e) => setQuoteData(prev => ({ ...prev, title: e.target.value }))}
                                             placeholder={t("quotes.upsert.form.title.placeholder")}
-                                            className="text-lg font-semibold border-0 border-b border-border focus:border-blue-500 rounded-none px-0"
+                                            className="text-lg font-semibold border-0 border-b border-border focus:border-primary rounded-none px-0"
                                         />
                                     </div>
                                 )}
 
                                 {/* Tableau des lignes */}
                                 <div className="mb-6">
-                                    <div className="rounded-t-lg overflow-hidden border border-blue-500/20">
+                                    <div className="rounded-t-lg overflow-hidden border border-border">
                                         <table className="w-full border-collapse">
-                                            <thead className="bg-[#6366f1] text-white">
+                                            <thead className="bg-primary text-primary-foreground">
                                                 <tr>
                                                     {billingType === "COMPLET" && (
                                                         <th className="text-left py-3 px-4 text-sm font-semibold w-32">Type</th>
@@ -653,7 +683,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                             </thead>
                                             <tbody className="bg-white">
                                                 {quoteData.items.map((item, index) => (
-                                                    <tr key={index} className="border-b border-dashed border-gray-200 group hover:bg-gray-50/50">
+                                                    <tr key={index} className="border-b border-dashed border-border group hover:bg-muted/50">
                                                         {item.type === QuoteItemType.SECTION ? (
                                                             <>
                                                                 <td className="py-2 px-4" colSpan={billingType === "COMPLET" ? (quoteData.vatExemptionReason === "none" ? 6 : 5) : (quoteData.vatExemptionReason === "none" ? 4 : 3)}>
@@ -661,7 +691,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                                         value={item.description}
                                                                         onChange={(e) => updateItem(index, "description", e.target.value)}
                                                                         placeholder="Titre de la section / Désignation"
-                                                                        className="border-0 focus:ring-0 rounded-none px-0 h-9 text-base font-bold text-red-500 italic w-full bg-transparent placeholder:text-red-300"
+                                                                        className="border-0 focus:ring-0 rounded-none px-0 h-9 text-base font-bold text-primary italic w-full bg-transparent placeholder:text-primary/50"
                                                                     />
                                                                 </td>
                                                                 <td className="py-2 px-2 text-right">
@@ -670,7 +700,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                                         variant="ghost"
                                                                         size="icon"
                                                                         onClick={() => removeItem(index)}
-                                                                        className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
                                                                     >
                                                                         <X className="h-4 w-4" />
                                                                     </Button>
@@ -705,7 +735,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                                             type="number"
                                                                             value={item.quantity}
                                                                             onChange={(e) => updateItem(index, "quantity", Number(e.target.value))}
-                                                                            className="text-right border-0 focus:ring-0 focus:border-b focus:border-blue-500 rounded-none px-0 h-9 text-sm w-full bg-transparent"
+                                                                            className="text-right border-0 focus:ring-0 focus:border-b focus:border-primary rounded-none px-0 h-9 text-sm w-full bg-transparent"
                                                                         />
                                                                     </td>
                                                                 )}
@@ -716,9 +746,9 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                                                 type="number"
                                                                                 value={item.vatRate || ""}
                                                                                 onChange={(e) => updateItem(index, "vatRate", Number(e.target.value) || 0)}
-                                                                                className="text-right border-0 focus:ring-0 focus:border-b focus:border-blue-500 rounded-none px-0 h-9 text-sm w-12 bg-transparent"
+                                                                                className="text-right border-0 focus:ring-0 focus:border-b focus:border-primary rounded-none px-0 h-9 text-sm w-12 bg-transparent"
                                                                             />
-                                                                            <span className="text-sm text-gray-500">%</span>
+                                                                            <span className="text-sm text-muted-foreground">%</span>
                                                                         </div>
                                                                     </td>
                                                                 )}
@@ -739,7 +769,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                                         variant="ghost"
                                                                         size="icon"
                                                                         onClick={() => removeItem(index)}
-                                                                        className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
                                                                     >
                                                                         <X className="h-4 w-4" />
                                                                     </Button>
@@ -757,7 +787,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                             type="button"
                                             variant="outline"
                                             onClick={addItem}
-                                            className="border-green-200 text-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-300 font-medium"
+                                            className="border-primary/30 text-primary hover:bg-primary/10 hover:text-primary font-medium"
                                         >
                                             <Plus className="h-4 w-4 mr-2" />
                                             Ligne simple
@@ -766,7 +796,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                             type="button"
                                             variant="outline"
                                             onClick={addSection}
-                                            className="border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium"
+                                            className="border-border text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
                                         >
                                             Ligne de désignation
                                         </Button>
@@ -819,7 +849,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                     }))
                                                 }}
                                             >
-                                                <SelectTrigger className="w-full border-blue-200 bg-blue-50/50 text-blue-900 font-medium h-10">
+                                                <SelectTrigger className="w-full border-border bg-muted/50 text-foreground font-medium h-10">
                                                     <SelectValue placeholder="Motif d'exonération de TVA" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -836,7 +866,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                 <Input
                                                     value={quoteData.vatExemptionText}
                                                     onChange={(e) => setQuoteData(prev => ({ ...prev, vatExemptionText: e.target.value }))}
-                                                    className="w-full border-dashed border-blue-300 bg-transparent text-blue-800 placeholder:text-blue-300 focus:border-blue-500 focus:ring-0 px-3 py-2 h-auto text-sm transition-all"
+                                                    className="w-full border-dashed border-primary/30 bg-transparent text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-0 px-3 py-2 h-auto text-sm transition-all"
                                                     placeholder="Mention légale de TVA..."
                                                 />
                                             )}
@@ -845,14 +875,14 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
 
                                     {/* Footer / Custom Text */}
                                     <div className="pt-8 mt-8 relative group">
-                                        <div className="absolute -top-6 right-0 text-xs text-blue-300">
+                                        <div className="absolute -top-6 right-0 text-xs text-muted-foreground">
                                             {480 - (quoteData.footerText?.length || 0)} caractères restants
                                         </div>
                                         <Input
                                             value={quoteData.footerText}
                                             onChange={(e) => setQuoteData(prev => ({ ...prev, footerText: e.target.value }))}
-                                            className="w-full text-center border-dashed border-blue-200 text-blue-600 bg-transparent focus:border-blue-500 focus:ring-0 placeholder:text-blue-200 text-sm py-2"
-                                            placeholder="- Pied de page (ex: Atou Services 21) -"
+                                            className="w-full text-center border-dashed border-primary/30 text-foreground bg-transparent focus:border-primary focus:ring-0 placeholder:text-muted-foreground text-sm py-2"
+                                            placeholder="Pied de page (ex: Atou Services 21)"
                                         />
                                     </div>
 
@@ -860,12 +890,12 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                     {(complementaryOptions.signature || complementaryOptions.acceptance) && (
                                         <div className="flex justify-between mt-12 px-4 pb-4">
                                             {complementaryOptions.acceptance && (
-                                                <div className="text-sm text-gray-500 italic">
+                                                <div className="text-sm text-muted-foreground italic">
                                                     "Bon pour accord"
                                                 </div>
                                             )}
                                             {complementaryOptions.signature && (
-                                                <div className="border border-gray-300 rounded-lg p-4 w-64 h-32 flex items-center justify-center bg-gray-50/50 text-gray-400 text-sm">
+                                                <div className="border border-border rounded-lg p-4 w-64 h-32 flex items-center justify-center bg-muted/50 text-muted-foreground text-sm">
                                                     Zone de signature
                                                 </div>
                                             )}
@@ -894,7 +924,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                 <Button
                                     type="button"
                                     onClick={handleSave}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                    className="bg-primary hover:bg-primary/90 text-primary-foreground"
                                 >
                                     <Save className="h-4 w-4 mr-2" />
                                     {t("common.actions.save")}
@@ -904,20 +934,20 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
 
                         {/* Sidebar Options (Droite) */}
                         <div className="w-[340px] shrink-0 space-y-4">
-                            <div className="bg-white rounded-lg shadow-sm p-4 border border-gray-200">
-                                <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
-                                    <div className="flex items-center gap-2 text-blue-900 font-bold">
+                            <div className="bg-card rounded-lg shadow-sm p-4 border border-border">
+                                    <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
+                                    <div className="flex items-center gap-2 text-foreground font-bold">
                                         <Settings className="h-5 w-5" />
                                         <span>Options</span>
                                     </div>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400">
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground">
                                         <X className="h-4 w-4" />
                                     </Button>
                                 </div>
 
                                 {/* Type de facturation */}
                                 <div className="mb-6">
-                                    <div className="flex items-center gap-2 mb-3 text-blue-600 font-semibold text-sm">
+                                    <div className="flex items-center gap-2 mb-3 text-primary font-semibold text-sm">
                                         <FileText className="h-4 w-4" />
                                         Type de facturation
                                     </div>
@@ -928,9 +958,9 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                 name="billingType"
                                                 checked={billingType === "RAPIDE"}
                                                 onChange={() => setBillingType("RAPIDE")}
-                                                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                                className="w-4 h-4 text-primary border-border focus:ring-primary"
                                             />
-                                            <span className="text-sm text-gray-700">Rapide</span>
+                                            <span className="text-sm text-foreground">Rapide</span>
                                         </label>
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
@@ -938,9 +968,9 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                 name="billingType"
                                                 checked={billingType === "COMPLET"}
                                                 onChange={() => setBillingType("COMPLET")}
-                                                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                                className="w-4 h-4 text-primary border-border focus:ring-primary"
                                             />
-                                            <span className="text-sm text-gray-700 font-medium">Complet</span>
+                                            <span className="text-sm text-foreground font-medium">Complet</span>
                                         </label>
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
@@ -948,17 +978,17 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                 name="billingType"
                                                 checked={billingType === "ELECTRONIC"}
                                                 onChange={() => setBillingType("ELECTRONIC")}
-                                                className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                                                className="w-4 h-4 text-primary border-border focus:ring-primary"
                                             />
-                                            <span className="text-sm text-gray-700">Format électronique</span>
-                                            <Info className="h-4 w-4 text-gray-400" />
+                                            <span className="text-sm text-foreground">Format électronique</span>
+                                            <Info className="h-4 w-4 text-muted-foreground" />
                                         </label>
                                     </div>
                                 </div>
 
                                 {/* Client Checkboxes */}
                                 <div className="mb-6">
-                                    <div className="flex items-center gap-2 mb-3 text-blue-600 font-semibold text-sm">
+                                    <div className="flex items-center gap-2 mb-3 text-primary font-semibold text-sm">
                                         <User className="h-4 w-4" />
                                         Client
                                     </div>
@@ -968,40 +998,40 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                 type="checkbox"
                                                 checked={clientOptions.deliveryAddress}
                                                 onChange={(e) => setClientOptions({ ...clientOptions, deliveryAddress: e.target.checked })}
-                                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                                             />
-                                            <span className="text-sm text-gray-600">Adresse de livraison</span>
+                                            <span className="text-sm text-foreground">Adresse de livraison</span>
                                         </label>
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
                                                 checked={clientOptions.siret}
                                                 onChange={(e) => setClientOptions({ ...clientOptions, siret: e.target.checked })}
-                                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                                             />
-                                            <span className="text-sm text-gray-600">SIREN ou SIRET</span>
+                                            <span className="text-sm text-foreground">SIREN ou SIRET</span>
                                         </label>
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
                                                 checked={clientOptions.vat}
                                                 onChange={(e) => setClientOptions({ ...clientOptions, vat: e.target.checked })}
-                                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                                             />
-                                            <span className="text-sm text-gray-600">N° de TVA intracommunautaire</span>
+                                            <span className="text-sm text-foreground">N° de TVA intracommunautaire</span>
                                         </label>
                                     </div>
                                 </div>
 
                                 {/* Langue */}
                                 <div className="mb-6">
-                                    <div className="flex items-center gap-2 mb-3 text-blue-600 font-semibold text-sm">
+                                    <div className="flex items-center gap-2 mb-3 text-primary font-semibold text-sm">
                                         <Languages className="h-4 w-4" />
                                         Langue
                                     </div>
                                     <div className="pl-2">
-                                        <Select value={language} onValueChange={setLanguage}>
-                                            <SelectTrigger className="w-full bg-white border-gray-300">
+                                        <Select value={language} onValueChange={handleLanguageChange}>
+                                            <SelectTrigger className="w-full bg-background border-border">
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -1014,7 +1044,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
 
                                 {/* Info complémentaires */}
                                 <div className="mb-6">
-                                    <div className="flex items-center gap-2 mb-3 text-blue-600 font-semibold text-sm">
+                                    <div className="flex items-center gap-2 mb-3 text-primary font-semibold text-sm">
                                         <AlignLeft className="h-4 w-4" />
                                         Info complémentaires
                                     </div>
@@ -1024,45 +1054,45 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                                 type="checkbox"
                                                 checked={complementaryOptions.acceptance}
                                                 onChange={(e) => setComplementaryOptions({ ...complementaryOptions, acceptance: e.target.checked })}
-                                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                                             />
-                                            <span className="text-sm text-gray-600">Conditions d'acceptation</span>
+                                            <span className="text-sm text-foreground">Conditions d'acceptation</span>
                                         </label>
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
                                                 checked={complementaryOptions.signature}
                                                 onChange={(e) => setComplementaryOptions({ ...complementaryOptions, signature: e.target.checked })}
-                                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                                             />
-                                            <span className="text-sm text-gray-600">Champ signature</span>
+                                            <span className="text-sm text-foreground">Champ signature</span>
                                         </label>
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
                                                 checked={complementaryOptions.title}
                                                 onChange={(e) => setComplementaryOptions({ ...complementaryOptions, title: e.target.checked })}
-                                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                                             />
-                                            <span className="text-sm text-gray-600">Intitulé du document</span>
+                                            <span className="text-sm text-foreground">Intitulé du document</span>
                                         </label>
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
                                                 checked={complementaryOptions.freeField}
                                                 onChange={(e) => setComplementaryOptions({ ...complementaryOptions, freeField: e.target.checked })}
-                                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                                             />
-                                            <span className="text-sm text-gray-600">Champ libre</span>
+                                            <span className="text-sm text-foreground">Champ libre</span>
                                         </label>
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
                                                 type="checkbox"
                                                 checked={complementaryOptions.globalDiscount}
                                                 onChange={(e) => setComplementaryOptions({ ...complementaryOptions, globalDiscount: e.target.checked })}
-                                                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
                                             />
-                                            <span className="text-sm text-gray-600">Remise globale</span>
+                                            <span className="text-sm text-foreground">Remise globale</span>
                                         </label>
                                     </div>
                                 </div>

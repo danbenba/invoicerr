@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { EditCompanyDto, PDFConfigDto } from '@/modules/company/dto/company.dto';
+import { EditCompanyDto, PDFConfigDto, QuoteSettingsDto } from '@/modules/company/dto/company.dto';
 import { MailTemplate, MailTemplateType, WebhookEvent } from '../../../prisma/generated/prisma/client'
 
 import { WebhookDispatcherService } from '../webhooks/webhook-dispatcher.service';
@@ -412,5 +412,74 @@ export class CompanyService {
         }
 
         return existingTemplate;
+    }
+
+    async getQuoteSettings(): Promise<QuoteSettingsDto> {
+        const existingCompany = await prisma.company.findFirst();
+
+        if (!existingCompany) {
+            throw new BadRequestException('No company found');
+        }
+
+        // Get quote settings from company or return defaults
+        const quoteSettings = existingCompany.quoteSettings as QuoteSettingsDto | null;
+
+        if (quoteSettings) {
+            // Convert date string to Date if needed
+            if (quoteSettings.defaultDate && typeof quoteSettings.defaultDate === 'string') {
+                quoteSettings.defaultDate = new Date(quoteSettings.defaultDate);
+            }
+            return quoteSettings;
+        }
+
+        return {
+            defaultDate: new Date(),
+            defaultFooterText: "Atou Services 21",
+            defaultBillingType: "COMPLET",
+            defaultClientOptions: {
+                deliveryAddress: true,
+                siret: true,
+                vat: true,
+            },
+            defaultComplementaryOptions: {
+                acceptance: true,
+                signature: true,
+                title: true,
+                freeField: true,
+                globalDiscount: false,
+            },
+            primaryColor: "#6366f1",
+            secondaryColor: "#e0e7ff",
+            tableTextColor: "#ffffff",
+            elementPlacement: {
+                logoPosition: "left",
+                clientInfoPosition: "right",
+                totalsPosition: "right",
+            },
+        };
+    }
+
+    async editQuoteSettings(quoteSettings: QuoteSettingsDto): Promise<QuoteSettingsDto> {
+        const existingCompany = await prisma.company.findFirst();
+
+        if (!existingCompany) {
+            throw new BadRequestException('No company found');
+        }
+
+        // Convert Date to string for JSON storage
+        const settingsToStore = {
+            ...quoteSettings,
+            defaultDate: quoteSettings.defaultDate ? (typeof quoteSettings.defaultDate === 'string' ? quoteSettings.defaultDate : quoteSettings.defaultDate.toISOString()) : undefined,
+        };
+
+        // Store quote settings in company
+        await prisma.company.update({
+            where: { id: existingCompany.id },
+            data: {
+                quoteSettings: settingsToStore as any,
+            },
+        });
+
+        return quoteSettings;
     }
 }

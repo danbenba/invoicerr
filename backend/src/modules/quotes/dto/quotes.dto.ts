@@ -10,6 +10,13 @@ export class CreateQuoteDto {
     paymentDetails?: string;
     paymentMethodId?: string;
     notes: string;
+    createdAt?: Date;
+    vatExemptionReason?: string;
+    vatExemptionText?: string;
+    footerText?: string;
+    billingType?: string;
+    clientOptions?: string;
+    complementaryOptions?: string;
     items: {
         description: string;
         quantity: number;
@@ -29,6 +36,13 @@ export class EditQuotesDto {
     paymentMethod?: string;
     paymentDetails?: string;
     paymentMethodId?: string;
+    createdAt?: Date;
+    vatExemptionReason?: string;
+    vatExemptionText?: string;
+    footerText?: string;
+    billingType?: string;
+    clientOptions?: string;
+    complementaryOptions?: string;
     items: {
         id?: string; // Optional for new items
         description: string;

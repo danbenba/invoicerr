@@ -1,4 +1,4 @@
-import { AlertTriangle, Building2, FileText, Mail, Plug, TicketIcon, User, Webhook } from "lucide-react"
+import { AlertTriangle, Building2, FileText, Mail, Plug, TicketIcon, User, Webhook, FileCheck } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useNavigate, useParams } from "react-router"
 
@@ -10,6 +10,7 @@ import InvitationsSettings from "./_components/invitations.settings"
 import PDFTemplatesSettings from "./_components/pdf.settings"
 import PluginsSettings from "./_components/plugins.settings"
 import WebhooksSettings from "./_components/webhooks.settings"
+import QuotesSettings from "./_components/quotes.settings"
 import { cn } from "@/lib/utils"
 import { useTranslation } from "react-i18next"
 
@@ -18,7 +19,7 @@ export default function Settings() {
     const { tab } = useParams()
     const navigate = useNavigate()
 
-    const validTabs = ["company", "template", "email", "webhooks", "account", "invitations", "plugins", "danger"]
+    const validTabs = ["company", "template", "email", "webhooks", "account", "invitations", "plugins", "quotes", "danger"]
     const currentTab = validTabs.includes(tab!) ? tab! : "company"
 
     const handleTabChange = (newTab: string) => {
@@ -62,6 +63,11 @@ export default function Settings() {
             icon: Plug,
         },
         {
+            value: "quotes",
+            label: t("settings.tabs.quotes") || "Devis",
+            icon: FileCheck,
+        },
+        {
             value: "danger",
             label: t("settings.tabs.dangerZone"),
             icon: AlertTriangle,
@@ -86,6 +92,8 @@ export default function Settings() {
                 return <InvitationsSettings />
             case "plugins":
                 return <PluginsSettings />
+            case "quotes":
+                return <QuotesSettings />
             case "danger":
                 return <DangerZoneSettings />
             default:

@@ -380,6 +380,31 @@ export class QuotesService {
             PRODUCT: config.product,
         };
 
+        const clientOptions = quote.clientOptions ? JSON.parse(quote.clientOptions) : {};
+        const complementaryOptions = quote.complementaryOptions ? JSON.parse(quote.complementaryOptions) : {};
+        const showSignature = complementaryOptions.signature !== false; // Default true
+        const showAcceptance = complementaryOptions.acceptance !== false; // Default true
+
+        // Calculate columns to show
+        const showType = quote.billingType === 'COMPLET';
+        const showQty = quote.billingType === 'COMPLET';
+        const showVAT = !quote.vatExemptionReason || quote.vatExemptionReason === 'none';
+
+        // Calculate colspan for footer
+        // Desig (1) + UnitPrice (1) + Total (1) = 3 fixed
+        // + Type (1 if show) + Qty (1 if show) + VAT (1 if show)
+        // Actually, in template:
+        // Description, Type, Qty, Unit, VAT, Total.
+        // If hidden, they are removed.
+        // We need 'colSpan' for the "Subtotal" label cell.
+        // Visible columns: Description (1).
+        // Type (1)? Qty (1)? UnitPrice (1). VAT (1)? Total (1).
+        // Total columns = 1 + (showType?1:0) + (showQty?1:0) + 1 + (showVAT?1:0) + 1
+        // Subtotal label spans all except last one (Total).
+        // So colSpan = TotalCols - 1.
+        const totalCols = 1 + (showType ? 1 : 0) + (showQty ? 1 : 0) + 1 + (showVAT ? 1 : 0) + 1;
+        const colSpan = totalCols - 1;
+
         const html = template({
             number: quote.rawNumber || quote.number.toString(),
             date: formatDate(quote.company, quote.createdAt),
@@ -398,7 +423,17 @@ export class QuotesService {
             totalHT: quote.totalHT.toFixed(2),
             totalVAT: quote.totalVAT.toFixed(2),
             totalTTC: quote.totalTTC.toFixed(2),
-            vatExemptText: quote.company.exemptVat && (quote.company.country || '').toUpperCase() === 'FRANCE' ? 'TVA non applicable, art. 293 B du CGI' : null,
+            vatExemptText: quote.vatExemptionText || (quote.company.exemptVat && (quote.company.country || '').toUpperCase() === 'FRANCE' ? 'TVA non applicable, art. 293 B du CGI' : null),
+            footerText: quote.footerText,
+
+            // Dynamic Visibility Flags
+            showType,
+            showQty,
+            showVAT,
+            colSpan,
+            showSignature,
+            showAcceptance,
+            showSignatureSection: showSignature || showAcceptance,
 
             paymentMethod: paymentMethodType,
             paymentDetails: paymentDetails,

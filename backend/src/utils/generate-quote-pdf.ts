@@ -82,7 +82,18 @@ export async function generateQuotePdf(quoteId: string): Promise<Uint8Array> {
         totalHT: quote.totalHT.toFixed(2),
         totalVAT: quote.totalVAT.toFixed(2),
         totalTTC: quote.totalTTC.toFixed(2),
-        vatExemptText: quote.company.exemptVat && (quote.company.country || '').toUpperCase() === 'FRANCE' ? 'TVA non applicable, art. 293 B du CGI' : null,
+        vatExemptText: quote.vatExemptionText || (quote.company.exemptVat && (quote.company.country || '').toUpperCase() === 'FRANCE' ? 'TVA non applicable, art. 293 B du CGI' : null),
+        footerText: quote.footerText,
+
+        showType: quote.billingType === 'COMPLET',
+        showQty: quote.billingType === 'COMPLET',
+        showVAT: !quote.vatExemptionReason || quote.vatExemptionReason === 'none',
+        colSpan: 2 + (quote.billingType === 'COMPLET' ? 1 : 0) + (quote.billingType === 'COMPLET' ? 1 : 0) + ((!quote.vatExemptionReason || quote.vatExemptionReason === 'none') ? 1 : 0),
+
+        showSignature: quote.complementaryOptions ? JSON.parse(quote.complementaryOptions).signature : true,
+        showAcceptance: quote.complementaryOptions ? JSON.parse(quote.complementaryOptions).acceptance : true,
+        showSignatureSection: (quote.complementaryOptions ? JSON.parse(quote.complementaryOptions).signature : true) || (quote.complementaryOptions ? JSON.parse(quote.complementaryOptions).acceptance : true),
+
 
         paymentMethod: paymentMethodType,
         paymentDetails: paymentDetails,

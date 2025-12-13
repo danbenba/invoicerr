@@ -1,3 +1,4 @@
+import * as React from "react";
 import {
     InputBase,
     InputBaseAdornment,
@@ -10,22 +11,25 @@ interface BetterInputProps extends React.ComponentProps<"input"> {
     postAdornment?: React.ReactNode;
 }
 
-export function BetterInput({ prefixAdornment, postAdornment, ...inputProps }: BetterInputProps) {
-    return (
-        <InputBase>
-            {prefixAdornment && (
-                <InputBaseAdornment>
-                    {prefixAdornment}
-                </InputBaseAdornment>
-            )}
-            <InputBaseControl>
-                <InputBaseInput {...inputProps} />
-            </InputBaseControl>
-            {postAdornment && (
-                <InputBaseAdornment>
-                    {postAdornment}
-                </InputBaseAdornment>
-            )}
-        </InputBase>
-    );
-}
+export const BetterInput = React.forwardRef<HTMLInputElement, BetterInputProps>(
+    ({ prefixAdornment, postAdornment, ...inputProps }, ref) => {
+        return (
+            <InputBase>
+                {prefixAdornment && (
+                    <InputBaseAdornment>
+                        {prefixAdornment}
+                    </InputBaseAdornment>
+                )}
+                <InputBaseControl>
+                    <InputBaseInput {...inputProps} ref={ref} />
+                </InputBaseControl>
+                {postAdornment && (
+                    <InputBaseAdornment>
+                        {postAdornment}
+                    </InputBaseAdornment>
+                )}
+            </InputBase>
+        );
+    }
+);
+BetterInput.displayName = "BetterInput";
