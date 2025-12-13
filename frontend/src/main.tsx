@@ -4,6 +4,7 @@ import './lib/i18n'
 import { Routes } from '@generouted/react-router'
 import { ThemeProvider } from './components/theme-provider'
 import { Toaster } from '@/components/ui/sonner'
+import { ProgressBar } from './components/progress-bar'
 import { createRoot } from 'react-dom/client'
 
 async function loadRuntimeConfig() {
@@ -24,6 +25,7 @@ async function bootstrap() {
 
     createRoot(document.getElementById('root')!).render(
         <ThemeProvider defaultTheme='system' storageKey='vite-ui-theme'>
+            <ProgressBar />
             <Routes />
             <Toaster richColors position='top-right' />
         </ThemeProvider>

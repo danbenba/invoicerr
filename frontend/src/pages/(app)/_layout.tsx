@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 import { Sidebar } from "@/components/sidebar";
 import { authClient } from "@/lib/auth";
+import { LoadingSpinner } from "@/components/loading-spinner";
 
 const ALLOWED_PATHS = [
     '/signature/[^/]+',
@@ -51,7 +52,7 @@ const Layout = () => {
     } = authClient.useSession();
 
     if (isPending) {
-        return null;
+        return <LoadingSpinner fullScreen />;
     }
 
     if (!session) {

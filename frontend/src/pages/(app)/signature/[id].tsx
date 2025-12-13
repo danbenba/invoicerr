@@ -11,6 +11,7 @@ import type { Quote } from "@/types"
 import type React from "react"
 import { toast } from "sonner"
 import { useParams } from "react-router"
+import { LoadingSpinner } from "@/components/loading-spinner"
 
 interface Signature {
     id: string
@@ -254,7 +255,7 @@ export default function Signature() {
                 return (
                     <Card>
                         <CardContent className="flex items-center justify-center p-8">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                            <LoadingSpinner size="md" />
                             <span className="ml-3">Signing in progress...</span>
                         </CardContent>
                     </Card>
@@ -287,7 +288,7 @@ export default function Signature() {
             <div className="max-w-7xl mx-auto space-y-6 px-6 py-8">
                 <Card>
                     <CardContent className="flex items-center justify-center p-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                        <LoadingSpinner size="md" />
                         <span className="ml-3">Loading signature...</span>
                     </CardContent>
                 </Card>
@@ -367,7 +368,7 @@ export default function Signature() {
                                     </div>
                                 ) : (
                                     <div className="flex items-center justify-center h-96">
-                                        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500"></div>
+                                        <LoadingSpinner size="lg" />
                                         <span className="ml-3">Loading PDF...</span>
                                     </div>
                                 )}

@@ -7,9 +7,22 @@ import { XIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 function Dialog({
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+  const handleOpenChange = React.useCallback((open: boolean) => {
+    if (open && (window as any).__PROGRESS_BAR__?.start) {
+      ;(window as any).__PROGRESS_BAR__.start()
+      setTimeout(() => {
+        if ((window as any).__PROGRESS_BAR__?.complete) {
+          ;(window as any).__PROGRESS_BAR__.complete()
+        }
+      }, 300)
+    }
+    onOpenChange?.(open)
+  }, [onOpenChange])
+
+  return <DialogPrimitive.Root data-slot="dialog" onOpenChange={handleOpenChange} {...props} />
 }
 
 function DialogTrigger({
