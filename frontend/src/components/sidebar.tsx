@@ -14,6 +14,7 @@ import {
     User,
     Users,
 } from "lucide-react"
+import { LanguageSelector } from "./language-selector"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { DropdownMenuGroup, DropdownMenuLabel, DropdownMenuSeparator } from "@radix-ui/react-dropdown-menu"
 import { Link, useLocation, useNavigate } from "react-router"
@@ -156,22 +157,27 @@ function SidebarInner() {
 
             <SidebarFooter>
                 <SidebarMenu className="flex flex-col gap-2">
-                    <SidebarMenuItem>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="icon" className={`${isOpen ? "ml-2" : ""} w-8 h-8`}>
-                                    <Sun className="size-4 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
-                                    <Moon className="absolute size-4 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
-                                    <span className="sr-only">{t("sidebar.theme.toggleTheme")}</span>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => setTheme("light")}>{t("sidebar.theme.light")}</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setTheme("dark")}>{t("sidebar.theme.dark")}</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => setTheme("system")}>{t("sidebar.theme.system")}</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </SidebarMenuItem>
+                    <div className={`flex gap-2 ${isOpen ? "ml-2" : "justify-center"}`}>
+                        <SidebarMenuItem>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" size="icon" className="w-8 h-8 rounded-xl">
+                                        <Sun className="size-4 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
+                                        <Moon className="absolute size-4 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
+                                        <span className="sr-only">{t("sidebar.theme.toggleTheme")}</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="rounded-xl">
+                                    <DropdownMenuItem onClick={() => setTheme("light")}>{t("sidebar.theme.light")}</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setTheme("dark")}>{t("sidebar.theme.dark")}</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setTheme("system")}>{t("sidebar.theme.system")}</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </SidebarMenuItem>
+                        <SidebarMenuItem>
+                            <LanguageSelector />
+                        </SidebarMenuItem>
+                    </div>
 
                     <SidebarMenuItem>
                         <DropdownMenu>

@@ -98,6 +98,13 @@
                     "individual": "Individual",
                     "description": "Select whether the client is an individual or a company"
                 },
+                "salutation": {
+                    "label": "Salutation",
+                    "placeholder": "Select salutation",
+                    "mr": "Mr",
+                    "ms": "Ms",
+                    "mrs": "Mrs"
+                },
                 "country": {
                     "label": "Country",
                     "placeholder": "Enter country"
@@ -1435,6 +1442,9 @@
             "light": "Light",
             "dark": "Dark",
             "system": "System"
+        },
+        "language": {
+            "changeLanguage": "Change language"
         },
         "userMenu": {
             "account": "Account",

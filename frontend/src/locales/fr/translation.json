@@ -98,6 +98,13 @@
                     "individual": "Particulier",
                     "description": "Sélectionnez si le client est une personne physique (particulier) ou une entreprise"
                 },
+                "salutation": {
+                    "label": "Civilité",
+                    "placeholder": "Sélectionner la civilité",
+                    "mr": "Monsieur",
+                    "ms": "Mademoiselle",
+                    "mrs": "Madame"
+                },
                 "country": {
                     "label": "Pays",
                     "placeholder": "Saisir le pays"
@@ -351,7 +358,7 @@
                     "title": "Info complémentaires",
                     "acceptance": "Conditions d'acceptation",
                     "signature": "Champ signature",
-                    "title": "Intitulé du document",
+                    "documentTitle": "Intitulé du document",
                     "freeField": "Champ libre",
                     "globalDiscount": "Remise globale"
                 },
@@ -1491,6 +1498,9 @@
             "light": "Clair",
             "dark": "Sombre",
             "system": "Système"
+        },
+        "language": {
+            "changeLanguage": "Changer la langue"
         },
         "userMenu": {
             "account": "Compte",

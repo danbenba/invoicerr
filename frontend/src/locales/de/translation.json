@@ -98,6 +98,13 @@
                     "individual": "Privatperson",
                     "description": "Wählen Sie, ob der Kunde eine Privatperson oder ein Unternehmen ist"
                 },
+                "salutation": {
+                    "label": "Anrede",
+                    "placeholder": "Anrede auswählen",
+                    "mr": "Herr",
+                    "ms": "Fräulein",
+                    "mrs": "Frau"
+                },
                 "country": {
                     "label": "Land",
                     "placeholder": "Geben Sie dem Land ein"
@@ -1423,6 +1430,9 @@
             "light": "Hell",
             "dark": "Dunkel",
             "system": "System"
+        },
+        "language": {
+            "changeLanguage": "Sprache ändern"
         },
         "userMenu": {
             "account": "Konto",

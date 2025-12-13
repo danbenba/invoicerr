@@ -1,6 +1,7 @@
 import { Languages } from "lucide-react"
 import { useTranslation } from "react-i18next"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
 import { useEffect, useState } from "react"
 
 const SUPPORTED_LANGUAGES = [
@@ -11,7 +12,7 @@ const SUPPORTED_LANGUAGES = [
 ]
 
 export function LanguageSelector() {
-    const { i18n } = useTranslation()
+    const { i18n, t } = useTranslation()
     const [currentLang, setCurrentLang] = useState(i18n.language || "en")
 
     useEffect(() => {
@@ -30,24 +31,26 @@ export function LanguageSelector() {
         localStorage.setItem("i18nextLng", lang)
     }
 
-    const currentLanguageName = SUPPORTED_LANGUAGES.find(l => l.code === currentLang)?.name || "English"
-
     return (
-        <div className="flex items-center gap-2">
-            <Languages className="h-4 w-4 text-muted-foreground" />
-            <Select value={currentLang} onValueChange={handleLanguageChange}>
-                <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder={currentLanguageName} />
-                </SelectTrigger>
-                <SelectContent>
-                    {SUPPORTED_LANGUAGES.map((lang) => (
-                        <SelectItem key={lang.code} value={lang.code}>
-                            {lang.name}
-                        </SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="w-8 h-8 rounded-xl">
+                    <Languages className="size-4" />
+                    <span className="sr-only">{t("sidebar.language.changeLanguage") || "Change language"}</span>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-xl">
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                    <DropdownMenuItem 
+                        key={lang.code} 
+                        onClick={() => handleLanguageChange(lang.code)}
+                        className={currentLang === lang.code ? "bg-accent" : ""}
+                    >
+                        {lang.name}
+                    </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+        </DropdownMenu>
     )
 }
 

@@ -98,6 +98,13 @@
                     "individual": "Persona física",
                     "description": "Selecciona si el cliente es una persona física o empresa"
                 },
+                "salutation": {
+                    "label": "Saludo",
+                    "placeholder": "Seleccionar saludo",
+                    "mr": "Sr.",
+                    "ms": "Srta.",
+                    "mrs": "Sra."
+                },
                 "country": {
                     "label": "País",
                     "placeholder": "Ingrese país"
@@ -1388,6 +1395,9 @@
             "light": "Claro",
             "dark": "Oscuro",
             "system": "Sistema"
+        },
+        "language": {
+            "changeLanguage": "Cambiar idioma"
         },
         "userMenu": {
             "account": "Cuenta",
