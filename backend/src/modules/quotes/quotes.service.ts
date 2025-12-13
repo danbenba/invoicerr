@@ -12,6 +12,7 @@ import { WebhookDispatcherService } from '../webhooks/webhook-dispatcher.service
 import { baseTemplate } from '@/modules/quotes/templates/base.template';
 import { formatDate } from '@/utils/date';
 import prisma from '@/prisma/prisma.service';
+import { marked } from 'marked';
 
 @Injectable()
 export class QuotesService {
@@ -344,6 +345,7 @@ export class QuotesService {
         }
 
         const config = quote.company.pdfConfig;
+        const quoteSettings = quote.company.quoteSettings as any || {};
         const templateHtml = baseTemplate;
         const template = Handlebars.compile(templateHtml);
 
@@ -391,19 +393,12 @@ export class QuotesService {
         const showVAT = !quote.vatExemptionReason || quote.vatExemptionReason === 'none';
 
         // Calculate colspan for footer
-        // Desig (1) + UnitPrice (1) + Total (1) = 3 fixed
-        // + Type (1 if show) + Qty (1 if show) + VAT (1 if show)
-        // Actually, in template:
-        // Description, Type, Qty, Unit, VAT, Total.
-        // If hidden, they are removed.
-        // We need 'colSpan' for the "Subtotal" label cell.
-        // Visible columns: Description (1).
-        // Type (1)? Qty (1)? UnitPrice (1). VAT (1)? Total (1).
-        // Total columns = 1 + (showType?1:0) + (showQty?1:0) + 1 + (showVAT?1:0) + 1
-        // Subtotal label spans all except last one (Total).
-        // So colSpan = TotalCols - 1.
-        const totalCols = 1 + (showType ? 1 : 0) + (showQty ? 1 : 0) + 1 + (showVAT ? 1 : 0) + 1;
-        const colSpan = totalCols - 1;
+        // In the new template, we have: Description, TVA (optional), Montant HT
+        // Total columns = 1 (Description) + (showVAT ? 1 : 0) + 1 (Montant HT) = 2 or 3
+        // For section rows, colSpan = totalCols
+        // For footer rows, we don't use colSpan in the same way, but we keep it for sections
+        const totalCols = 1 + (showVAT ? 1 : 0) + 1; // Description + TVA (optional) + Montant HT
+        const colSpan = totalCols;
 
         const html = template({
             number: quote.rawNumber || quote.number.toString(),
@@ -413,18 +408,20 @@ export class QuotesService {
             client: quote.client,
             currency: quote.currency,
             items: quote.items.map(i => ({
-                description: i.description,
+                description: marked.parse(i.description || '', { breaks: true }) as string,
                 quantity: i.quantity,
-                unitPrice: i.unitPrice.toFixed(2),
+                unitPrice: i.unitPrice.toFixed(2).replace('.', ','),
                 vatRate: i.vatRate,
-                totalPrice: (i.quantity * i.unitPrice * (1 + (i.vatRate || 0) / 100)).toFixed(2),
+                totalPrice: (i.quantity * i.unitPrice * (1 + (i.vatRate || 0) / 100)).toFixed(2).replace('.', ','),
                 type: itemTypeLabels[i.type] || i.type,
+                isSection: i.type === 'SECTION',
             })),
-            totalHT: quote.totalHT.toFixed(2),
-            totalVAT: quote.totalVAT.toFixed(2),
-            totalTTC: quote.totalTTC.toFixed(2),
+            totalHT: quote.totalHT.toFixed(2).replace('.', ','),
+            totalVAT: quote.totalVAT.toFixed(2).replace('.', ','),
+            totalTTC: quote.totalTTC.toFixed(2).replace('.', ','),
             vatExemptText: quote.vatExemptionText || (quote.company.exemptVat && (quote.company.country || '').toUpperCase() === 'FRANCE' ? 'TVA non applicable, art. 293 B du CGI' : null),
             footerText: quote.footerText,
+            title: complementaryOptions.title ? quote.title : undefined,
 
             // Dynamic Visibility Flags
             showType,
@@ -438,12 +435,12 @@ export class QuotesService {
             paymentMethod: paymentMethodType,
             paymentDetails: paymentDetails,
 
-            // 🎨 Style & labels from PDFConfig
+            // 🎨 Style & labels from PDFConfig and QuoteSettings
             fontFamily: config.fontFamily,
             padding: config.padding,
-            primaryColor: config.primaryColor,
-            secondaryColor: config.secondaryColor,
-            tableTextColor: getInvertColor(config.secondaryColor),
+            primaryColor: quoteSettings.primaryColor || config.primaryColor,
+            secondaryColor: quoteSettings.secondaryColor || config.secondaryColor,
+            tableTextColor: quoteSettings.tableTextColor || getInvertColor(quoteSettings.secondaryColor || config.secondaryColor),
             includeLogo: config.includeLogo,
             logoB64: config?.logoB64 ?? '',
             noteExists: !!quote.notes,

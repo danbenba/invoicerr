@@ -6,7 +6,7 @@ import { useGet, usePost, usePatch } from "@/hooks/use-fetch"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Save, X, Download, Upload, Settings, FileText, User, Languages, AlignLeft, Info } from "lucide-react"
+import { Save, X, Download, Upload, Settings, FileText, User, Languages, AlignLeft, Info } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslation } from "react-i18next"
 import type { Company, Client } from "@/types"
@@ -120,7 +120,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
         paymentMethodId: "",
         vatExemptionReason: "not_subject",
         vatExemptionText: "TVA non applicable, art. 293 B du CGI",
-        footerText: "Atou Services 21",
+        footerText: quoteSettings?.defaultFooterText || "",
         createdAt: new Date(),
         items: [] as Array<{
             id?: string
@@ -155,6 +155,15 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
     }, [company, pdfConfig])
 
     useEffect(() => {
+        if (quoteSettings?.defaultFooterText) {
+            setQuoteData(prev => ({
+                ...prev,
+                footerText: prev.footerText || quoteSettings.defaultFooterText || "Atou Services 21"
+            }))
+        }
+    }, [quoteSettings])
+
+    useEffect(() => {
         if (isEdit && quote) {
             if (quote.billingType) setBillingType(quote.billingType)
             if (quote.clientOptions) {
@@ -182,7 +191,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                 paymentMethodId: quote.paymentMethodId || "",
                 vatExemptionReason: quote.vatExemptionReason || "not_subject",
                 vatExemptionText: quote.vatExemptionText || "TVA non applicable, art. 293 B du CGI",
-                footerText: quote.footerText || "Atou Services 21",
+                footerText: quote.footerText || quoteSettings?.defaultFooterText || "Atou Services 21",
                 items: quote.items
                     .sort((a: any, b: any) => a.order - b.order)
                     .map((item: any) => ({
@@ -385,30 +394,12 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
 
     return (
         <>
-            <div className="min-h-screen bg-background py-8">
-                <div className="max-w-[1400px] mx-auto px-6">
-                    {/* En-tête de navigation */}
-                    <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center gap-4">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => navigate("/quotes")}
-                                className="h-8 w-8 hover:bg-muted"
-                            >
-                                <ArrowLeft className="h-4 w-4" />
-                            </Button>
-                            <h1 className="text-xl font-bold">
-                                {t(`quotes.upsert.title.${isEdit ? "edit" : "create"}`)}
-                            </h1>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-8 items-start">
-                        {/* Zone Principale (Document) */}
-                        <div className="flex-1 min-w-0">
-                            <div className="bg-card rounded-lg shadow-lg border border-border p-8 min-h-[1000px] print:shadow-none print:p-0">
+            <div className="min-h-screen bg-background">
+                <main className="flex mx-auto py-6" style={{ gap: '20px', width: '1170px', transition: 'width 300ms' }}>
+                    {/* Document Container */}
+                    <div className="flex-1">
+                        <div className="document-wrapper">
+                            <div className="document bg-card border border-border" style={{ width: '900px', minHeight: '1272.86px', margin: '0 auto', padding: '40px' }}>
                                 {/* En-tête du document */}
                                 <div className="mb-8">
                                     <div className="mb-6 group relative w-fit min-h-[5rem]">
@@ -632,13 +623,8 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                 <div className="flex items-end justify-between mb-8">
                                     <div className="flex-1">
                                         <span className="text-xl font-medium text-foreground">
-                                            {pdfConfig?.labels?.quote || "Devis"}
+                                            Devis {quote?.rawNumber || quote?.number ? `N° ${quote.rawNumber || quote.number}` : ''}
                                         </span>
-                                        {quote?.number && (
-                                            <span className="text-xl font-medium text-foreground ml-2">
-                                                N° {quote.rawNumber || quote.number}
-                                            </span>
-                                        )}
                                     </div>
                                     <div className="flex items-end gap-4">
                                         <div>
@@ -866,7 +852,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                         </div> {/* Fin Zone principale (Gauche) */}
 
                         {/* Sidebar Options (Droite) */}
-                        <div className="w-[340px] shrink-0 space-y-4">
+                        <div className="w-[250px] min-w-[250px] shrink-0">
                             <div className="bg-card rounded-lg shadow-sm p-4 border border-border">
                                     <div className="flex items-center justify-between mb-4 pb-2 border-b border-border">
                                     <div className="flex items-center gap-2 text-foreground font-bold">
@@ -1032,7 +1018,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                             </div>
                         </div>
                     </div>
-                </div>
+                </main>
             </div>
 
             <ClientUpsert

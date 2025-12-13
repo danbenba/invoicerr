@@ -6,6 +6,7 @@ import { BadRequestException } from '@nestjs/common';
 import { baseTemplate } from '@/modules/quotes/templates/base.template';
 import { formatDate } from '@/utils/date';
 import prisma from '@/prisma/prisma.service';
+import { marked } from 'marked';
 
 /**
  * Generate PDF for a quote without requiring QuotesService
@@ -28,6 +29,7 @@ export async function generateQuotePdf(quoteId: string): Promise<Uint8Array> {
     }
 
     const config = quote.company.pdfConfig;
+    const quoteSettings = quote.company.quoteSettings as any || {};
     const templateHtml = baseTemplate;
     const template = Handlebars.compile(templateHtml);
 
@@ -72,23 +74,25 @@ export async function generateQuotePdf(quoteId: string): Promise<Uint8Array> {
         client: quote.client,
         currency: quote.currency,
         items: quote.items.map(i => ({
-            description: i.description,
+            description: marked.parse(i.description || '', { breaks: true }) as string,
             quantity: i.quantity,
-            unitPrice: i.unitPrice.toFixed(2),
+            unitPrice: i.unitPrice.toFixed(2).replace('.', ','),
             vatRate: i.vatRate,
-            totalPrice: (i.quantity * i.unitPrice * (1 + (i.vatRate || 0) / 100)).toFixed(2),
+            totalPrice: (i.quantity * i.unitPrice * (1 + (i.vatRate || 0) / 100)).toFixed(2).replace('.', ','),
             type: itemTypeLabels[i.type] || i.type,
+            isSection: i.type === 'SECTION',
         })),
-        totalHT: quote.totalHT.toFixed(2),
-        totalVAT: quote.totalVAT.toFixed(2),
-        totalTTC: quote.totalTTC.toFixed(2),
+        totalHT: quote.totalHT.toFixed(2).replace('.', ','),
+        totalVAT: quote.totalVAT.toFixed(2).replace('.', ','),
+        totalTTC: quote.totalTTC.toFixed(2).replace('.', ','),
         vatExemptText: quote.vatExemptionText || (quote.company.exemptVat && (quote.company.country || '').toUpperCase() === 'FRANCE' ? 'TVA non applicable, art. 293 B du CGI' : null),
         footerText: quote.footerText,
+        title: quote.complementaryOptions ? (JSON.parse(quote.complementaryOptions).title ? quote.title : undefined) : undefined,
 
-        showType: quote.billingType === 'COMPLET',
-        showQty: quote.billingType === 'COMPLET',
+        showType: false, // Not used in new template
+        showQty: false, // Not used in new template
         showVAT: !quote.vatExemptionReason || quote.vatExemptionReason === 'none',
-        colSpan: 2 + (quote.billingType === 'COMPLET' ? 1 : 0) + (quote.billingType === 'COMPLET' ? 1 : 0) + ((!quote.vatExemptionReason || quote.vatExemptionReason === 'none') ? 1 : 0),
+        colSpan: 1 + ((!quote.vatExemptionReason || quote.vatExemptionReason === 'none') ? 1 : 0) + 1, // Description + TVA (optional) + Montant HT
 
         showSignature: quote.complementaryOptions ? JSON.parse(quote.complementaryOptions).signature : true,
         showAcceptance: quote.complementaryOptions ? JSON.parse(quote.complementaryOptions).acceptance : true,
@@ -98,12 +102,12 @@ export async function generateQuotePdf(quoteId: string): Promise<Uint8Array> {
         paymentMethod: paymentMethodType,
         paymentDetails: paymentDetails,
 
-        // 🎨 Style & labels from PDFConfig
+        // 🎨 Style & labels from PDFConfig and QuoteSettings
         fontFamily: config.fontFamily,
         padding: config.padding,
-        primaryColor: config.primaryColor,
-        secondaryColor: config.secondaryColor,
-        tableTextColor: getInvertColor(config.secondaryColor),
+        primaryColor: quoteSettings.primaryColor || config.primaryColor,
+        secondaryColor: quoteSettings.secondaryColor || config.secondaryColor,
+        tableTextColor: quoteSettings.tableTextColor || getInvertColor(quoteSettings.secondaryColor || config.secondaryColor),
         includeLogo: config.includeLogo,
         logoB64: config?.logoB64 ?? '',
         noteExists: !!quote.notes,

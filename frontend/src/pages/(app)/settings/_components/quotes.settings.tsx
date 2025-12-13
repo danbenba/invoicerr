@@ -39,6 +39,7 @@ interface QuoteSettings {
         clientInfoPosition?: "left" | "right"
         totalsPosition?: "left" | "right"
     }
+    vatEnabled?: boolean
 }
 
 export default function QuotesSettings() {
@@ -67,6 +68,7 @@ export default function QuotesSettings() {
             clientInfoPosition: z.enum(["left", "right"]).optional(),
             totalsPosition: z.enum(["left", "right"]).optional(),
         }).optional(),
+        vatEnabled: z.boolean().optional(),
     })
 
     const { data } = useGet<QuoteSettings>("/api/company/quote-settings")
@@ -99,6 +101,7 @@ export default function QuotesSettings() {
                 clientInfoPosition: "right",
                 totalsPosition: "right",
             },
+            vatEnabled: true,
         },
     })
 
@@ -250,6 +253,32 @@ export default function QuotesSettings() {
                                         </FormItem>
                                     )}
                                 />
+                            </div>
+
+                            <div>
+                                <Label className="text-base font-semibold mb-4 block">TVA</Label>
+                                <div className="space-y-3 pl-2">
+                                    <FormField
+                                        control={form.control}
+                                        name="vatEnabled"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                                <div className="space-y-0.5">
+                                                    <FormLabel>TVA activée par défaut</FormLabel>
+                                                    <FormDescription>
+                                                        Activer la TVA par défaut pour les nouveaux devis
+                                                    </FormDescription>
+                                                </div>
+                                                <FormControl>
+                                                    <Switch
+                                                        checked={field.value ?? true}
+                                                        onCheckedChange={field.onChange}
+                                                    />
+                                                </FormControl>
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
                             </div>
 
                             <div>

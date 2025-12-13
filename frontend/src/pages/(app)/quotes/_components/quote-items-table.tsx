@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Bold, Italic, List, Link, Heading1, Heading2, Code, Quote } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Label } from "@/components/ui/label"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 
 interface QuoteItem {
     id?: string
@@ -136,6 +138,24 @@ export function QuoteItemsTable({
     onAddSection,
 }: QuoteItemsTableProps) {
     const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
+    const [selectionIndex, setSelectionIndex] = useState<number | null>(null)
+    const [toolbarPosition, setToolbarPosition] = useState<{ top: number; left: number } | null>(null)
+
+    // Fermer la toolbar quand on clique ailleurs
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            const target = e.target as HTMLElement
+            if (!target.closest('.markdown-toolbar') && !target.closest('textarea[data-item-index]')) {
+                setSelectionIndex(null)
+                setToolbarPosition(null)
+            }
+        }
+
+        if (selectionIndex !== null) {
+            document.addEventListener('mousedown', handleClickOutside)
+            return () => document.removeEventListener('mousedown', handleClickOutside)
+        }
+    }, [selectionIndex])
 
     const insertMarkdown = (index: number, before: string, after: string = "") => {
         const item = items[index]
@@ -274,29 +294,135 @@ export function QuoteItemsTable({
                                                     : 'border-border hover:border-primary/50'
                                             }`}
                                         >
-                                            {focusedIndex === index && (
-                                                <MarkdownToolbar
-                                                    onBold={() => handleMarkdownAction(index, "bold")}
-                                                    onItalic={() => handleMarkdownAction(index, "italic")}
-                                                    onHeading1={() => handleMarkdownAction(index, "heading1")}
-                                                    onHeading2={() => handleMarkdownAction(index, "heading2")}
-                                                    onList={() => handleMarkdownAction(index, "list")}
-                                                    onCode={() => handleMarkdownAction(index, "code")}
-                                                    onQuote={() => handleMarkdownAction(index, "quote")}
-                                                    onInsertLink={(text, url) => handleInsertLink(index, text, url)}
+                                            {focusedIndex === index ? (
+                                                <Textarea
+                                                    data-item-index={index}
+                                                    value={item.description}
+                                                    onChange={(e) => onUpdateItem(index, "description", e.target.value)}
+                                                    placeholder="Description (Markdown supporté)"
+                                                    className="min-h-[60px] border-0 focus-visible:ring-0 resize-none text-sm bg-background text-foreground placeholder:text-muted-foreground/60 font-normal"
+                                                    onFocus={() => setFocusedIndex(index)}
+                                                    onBlur={(e) => {
+                                                        // Ne pas fermer si on clique sur la toolbar
+                                                        const relatedTarget = e.relatedTarget as HTMLElement
+                                                        if (relatedTarget?.closest('.markdown-toolbar')) {
+                                                            return
+                                                        }
+                                                        setTimeout(() => {
+                                                            setFocusedIndex(null)
+                                                            setSelectionIndex(null)
+                                                            setToolbarPosition(null)
+                                                        }, 200)
+                                                    }}
+                                                    onMouseUp={(e) => {
+                                                        const textarea = e.currentTarget
+                                                        const text = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd)
+                                                        
+                                                        if (text.length > 0) {
+                                                            setSelectionIndex(index)
+                                                            const rect = textarea.getBoundingClientRect()
+                                                            const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+                                                            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+                                                            setToolbarPosition({
+                                                                top: rect.top + scrollTop - 50,
+                                                                left: rect.left + scrollLeft + (rect.width / 2)
+                                                            })
+                                                        } else {
+                                                            setSelectionIndex(null)
+                                                            setToolbarPosition(null)
+                                                        }
+                                                    }}
+                                                    onSelect={(e) => {
+                                                        const textarea = e.currentTarget
+                                                        const text = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd)
+                                                        
+                                                        if (text.length > 0) {
+                                                            setSelectionIndex(index)
+                                                            const rect = textarea.getBoundingClientRect()
+                                                            const scrollTop = window.pageYOffset || document.documentElement.scrollTop
+                                                            const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft
+                                                            setToolbarPosition({
+                                                                top: rect.top + scrollTop - 50,
+                                                                left: rect.left + scrollLeft + (rect.width / 2)
+                                                            })
+                                                        } else {
+                                                            setSelectionIndex(null)
+                                                            setToolbarPosition(null)
+                                                        }
+                                                    }}
                                                 />
+                                            ) : (
+                                                <div
+                                                    onClick={() => setFocusedIndex(index)}
+                                                    className="min-h-[60px] p-3 cursor-text text-sm bg-background text-foreground prose prose-sm max-w-none dark:prose-invert prose-headings:font-bold prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-strong:font-bold prose-em:italic prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-code:bg-muted prose-code:px-1 prose-code:rounded prose-code:text-xs prose-pre:bg-muted prose-pre:p-2 prose-pre:rounded prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:pl-4 prose-blockquote:italic prose-a:text-primary prose-a:underline"
+                                                    style={{ minHeight: '60px' }}
+                                                >
+                                                    {item.description ? (
+                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                            {item.description}
+                                                        </ReactMarkdown>
+                                                    ) : (
+                                                        <span className="text-muted-foreground/60">Description (Markdown supporté)</span>
+                                                    )}
+                                                </div>
                                             )}
-                                            <Textarea
-                                                data-item-index={index}
-                                                value={item.description}
-                                                onChange={(e) => onUpdateItem(index, "description", e.target.value)}
-                                                placeholder="Description (Markdown supporté)"
-                                                className="min-h-[60px] border-0 focus-visible:ring-0 resize-none text-sm bg-background text-foreground placeholder:text-muted-foreground/60 font-normal"
-                                                onFocus={() => setFocusedIndex(index)}
-                                                onBlur={() => setFocusedIndex(null)}
-                                            />
                                         </div>
                                     </td>
+                                    {selectionIndex === index && toolbarPosition && (
+                                        <div 
+                                            className="markdown-toolbar fixed z-50 bg-card border border-border rounded-lg shadow-lg p-1 flex items-center gap-1"
+                                            style={{ 
+                                                top: `${toolbarPosition.top}px`, 
+                                                left: `${toolbarPosition.left}px`,
+                                                transform: 'translateX(-50%)'
+                                            }}
+                                            onMouseDown={(e) => e.preventDefault()}
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
+                                            <MarkdownToolbar
+                                                onBold={() => {
+                                                    handleMarkdownAction(index, "bold")
+                                                    setSelectionIndex(null)
+                                                    setToolbarPosition(null)
+                                                }}
+                                                onItalic={() => {
+                                                    handleMarkdownAction(index, "italic")
+                                                    setSelectionIndex(null)
+                                                    setToolbarPosition(null)
+                                                }}
+                                                onHeading1={() => {
+                                                    handleMarkdownAction(index, "heading1")
+                                                    setSelectionIndex(null)
+                                                    setToolbarPosition(null)
+                                                }}
+                                                onHeading2={() => {
+                                                    handleMarkdownAction(index, "heading2")
+                                                    setSelectionIndex(null)
+                                                    setToolbarPosition(null)
+                                                }}
+                                                onList={() => {
+                                                    handleMarkdownAction(index, "list")
+                                                    setSelectionIndex(null)
+                                                    setToolbarPosition(null)
+                                                }}
+                                                onCode={() => {
+                                                    handleMarkdownAction(index, "code")
+                                                    setSelectionIndex(null)
+                                                    setToolbarPosition(null)
+                                                }}
+                                                onQuote={() => {
+                                                    handleMarkdownAction(index, "quote")
+                                                    setSelectionIndex(null)
+                                                    setToolbarPosition(null)
+                                                }}
+                                                onInsertLink={(text, url) => {
+                                                    handleInsertLink(index, text, url)
+                                                    setSelectionIndex(null)
+                                                    setToolbarPosition(null)
+                                                }}
+                                            />
+                                        </div>
+                                    )}
                                     {billingType === "COMPLET" && (
                                         <td className="py-3 px-4">
                                             <Input
@@ -360,14 +486,30 @@ export function QuoteItemsTable({
                     <Plus className="h-4 w-4 mr-2" />
                     Ligne simple
                 </Button>
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onAddSection}
-                    className="border-border text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
-                >
-                    Ligne de désignation
-                </Button>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="border-border text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
+                        >
+                            Ligne de désignation
+                            <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-56 p-1" align="start">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            className="w-full justify-start font-normal"
+                            onClick={onAddSection}
+                        >
+                            Ajouter une section
+                        </Button>
+                    </PopoverContent>
+                </Popover>
             </div>
         </div>
     )

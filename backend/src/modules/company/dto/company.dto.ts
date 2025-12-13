@@ -104,4 +104,5 @@ export interface QuoteSettingsDto {
         clientInfoPosition?: "left" | "right"
         totalsPosition?: "left" | "right"
     }
+    vatEnabled?: boolean
 }
