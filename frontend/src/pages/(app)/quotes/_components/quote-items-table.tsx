@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { X, Plus } from "lucide-react"
 import { QuoteItemType } from "@/types"
 import { Textarea } from "@/components/ui/textarea"
-import { Bold, Italic, List, Link, Heading1, Heading2, Code, Quote } from "lucide-react"
+import { Bold, Italic, List, Link, Heading1, Heading2, Code, Quote, Maximize } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Label } from "@/components/ui/label"
 import ReactMarkdown from "react-markdown"
@@ -34,6 +34,8 @@ interface QuoteItemsTableProps {
     onUpdateItem: (index: number, field: string, value: any) => void
     onRemoveItem: (index: number) => void
     onAddItem: () => void
+    onOpenMarkdownModal?: (index: number, content: string) => void
+    showQuantity?: boolean
 }
 
 function MarkdownToolbar({ 
@@ -134,6 +136,8 @@ export function QuoteItemsTable({
     onUpdateItem,
     onRemoveItem,
     onAddItem,
+    onOpenMarkdownModal,
+    showQuantity = true,
 }: QuoteItemsTableProps) {
     const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
     const [selectionIndex, setSelectionIndex] = useState<number | null>(null)
@@ -230,7 +234,7 @@ export function QuoteItemsTable({
                                 <th className="text-left py-3 px-4 text-sm font-semibold w-32">Type</th>
                             )}
                             <th className="text-left py-3 px-4 text-sm font-semibold tracking-wide">Désignation</th>
-                            {billingType === "COMPLET" && (
+                            {billingType === "COMPLET" && showQuantity && (
                                 <th className="text-right py-3 px-4 text-sm font-semibold w-24">Qté</th>
                             )}
                             {vatExemptionReason === "none" && (
@@ -247,7 +251,7 @@ export function QuoteItemsTable({
                                     <td 
                                         className="py-4 px-4" 
                                         style={{ backgroundColor: secondaryColor }}
-                                        colSpan={billingType === "COMPLET" ? (vatExemptionReason === "none" ? 6 : 5) : (vatExemptionReason === "none" ? 4 : 3)}
+                                        colSpan={billingType === "COMPLET" ? (showQuantity ? (vatExemptionReason === "none" ? 6 : 5) : (vatExemptionReason === "none" ? 5 : 4)) : (vatExemptionReason === "none" ? 4 : 3)}
                                     >
                                         <div className="flex items-center gap-2">
                                             <Input
@@ -279,7 +283,8 @@ export function QuoteItemsTable({
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="SERVICE">Prestation</SelectItem>
-                                                    <SelectItem value="GOOD">Bien</SelectItem>
+                                                    <SelectItem value="PRODUCT">Marchandise</SelectItem>
+                                                    <SelectItem value="DAY">Location</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </td>
@@ -292,13 +297,28 @@ export function QuoteItemsTable({
                                                     : 'border-border hover:border-primary/50'
                                             }`}
                                         >
+                                            {/* Bouton fullscreen en haut à droite (toujours visible en mode édition) */}
+                                            {focusedIndex === index && onOpenMarkdownModal && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        onOpenMarkdownModal(index, item.description)
+                                                    }}
+                                                    className="absolute top-2 right-2 h-6 w-6 z-10 bg-background/90 border border-border shadow-sm hover:bg-muted"
+                                                >
+                                                    <Maximize className="h-3 w-3" />
+                                                </Button>
+                                            )}
                                             {focusedIndex === index ? (
                                                 <Textarea
                                                     data-item-index={index}
                                                     value={item.description}
                                                     onChange={(e) => onUpdateItem(index, "description", e.target.value)}
                                                     placeholder="Description (Markdown supporté)"
-                                                    className="min-h-[60px] border-0 focus-visible:ring-0 resize-none text-sm bg-background text-foreground placeholder:text-muted-foreground/60 font-normal"
+                                                    className="min-h-[60px] border-0 focus-visible:ring-0 resize-none text-sm bg-background text-foreground placeholder:text-muted-foreground/60 font-normal pr-10"
                                                     onFocus={() => setFocusedIndex(index)}
                                                     onBlur={(e) => {
                                                         // Ne pas fermer si on clique sur la toolbar
@@ -350,17 +370,35 @@ export function QuoteItemsTable({
                                                     }}
                                                 />
                                             ) : (
-                                                <div
-                                                    onClick={() => setFocusedIndex(index)}
-                                                    className="min-h-[60px] p-3 cursor-text text-sm bg-background text-foreground prose prose-sm max-w-none dark:prose-invert prose-headings:font-bold prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-strong:font-bold prose-em:italic prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-code:bg-muted prose-code:px-1 prose-code:rounded prose-code:text-xs prose-pre:bg-muted prose-pre:p-2 prose-pre:rounded prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:pl-4 prose-blockquote:italic prose-a:text-primary prose-a:underline"
-                                                    style={{ minHeight: '60px' }}
-                                                >
-                                                    {item.description ? (
-                                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                                            {item.description}
-                                                        </ReactMarkdown>
-                                                    ) : (
-                                                        <span className="text-muted-foreground/60">Description (Markdown supporté)</span>
+                                                <div className="relative group/item">
+                                                    <div
+                                                        onClick={() => setFocusedIndex(index)}
+                                                        className="min-h-[60px] p-3 cursor-text text-sm bg-background text-foreground prose prose-sm max-w-none dark:prose-invert prose-headings:font-bold prose-headings:mt-2 prose-headings:mb-1 prose-p:my-1 prose-strong:font-bold prose-em:italic prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-code:bg-muted prose-code:px-1 prose-code:rounded prose-code:text-xs prose-pre:bg-muted prose-pre:p-2 prose-pre:rounded prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:pl-4 prose-blockquote:italic prose-a:text-primary prose-a:underline pr-10"
+                                                        style={{ minHeight: '60px' }}
+                                                    >
+                                                        {item.description ? (
+                                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                                {item.description}
+                                                            </ReactMarkdown>
+                                                        ) : (
+                                                            <span className="text-muted-foreground/60">Description (Markdown supporté)</span>
+                                                        )}
+                                                    </div>
+                                                    {/* Bouton fullscreen en haut à droite pour ouvrir le modal */}
+                                                    {onOpenMarkdownModal && (
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                e.preventDefault()
+                                                                onOpenMarkdownModal(index, item.description)
+                                                            }}
+                                                            className="absolute top-2 right-2 h-7 w-7 z-10 opacity-0 group-hover/item:opacity-100 transition-opacity bg-background/90 border border-border shadow-sm hover:bg-muted"
+                                                        >
+                                                            <Maximize className="h-4 w-4" />
+                                                        </Button>
                                                     )}
                                                 </div>
                                             )}
@@ -421,7 +459,7 @@ export function QuoteItemsTable({
                                             />
                                         </div>
                                     )}
-                                    {billingType === "COMPLET" && (
+                                    {billingType === "COMPLET" && showQuantity && (
                                         <td className="py-3 px-4">
                                             <Input
                                                 type="number"

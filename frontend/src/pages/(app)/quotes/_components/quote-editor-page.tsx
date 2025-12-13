@@ -6,7 +6,7 @@ import { useGet, usePost, usePatch } from "@/hooks/use-fetch"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Save, X, Download, Upload, Settings, FileText, User, Languages, AlignLeft, Info, Maximize2, Minimize2 } from "lucide-react"
+import { Save, X, Download, Upload, Settings, FileText, User, Languages, AlignLeft, Info, Maximize2, Minimize2, Bold, Italic, Heading1, Heading2, List, Code, Quote } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslation } from "react-i18next"
 import type { Company, Client } from "@/types"
@@ -17,6 +17,8 @@ import { Calendar } from "@/components/ui/calendar"
 import { ClientUpsert } from "../../clients/_components/client-upsert"
 import { DatePicker } from "@/components/date-picker"
 import { QuoteItemsTable } from "./quote-items-table"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Textarea } from "@/components/ui/textarea"
 
 interface QuoteEditorPageProps {
     quoteId?: string
@@ -135,6 +137,31 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
 
     const [clientDialogOpen, setClientDialogOpen] = useState(false)
     const [isFullscreen, setIsFullscreen] = useState(false)
+    const [markdownModalOpen, setMarkdownModalOpen] = useState(false)
+    const [markdownModalIndex, setMarkdownModalIndex] = useState<number | null>(null)
+    const [markdownModalContent, setMarkdownModalContent] = useState("")
+    const [markdownModalSelection, setMarkdownModalSelection] = useState<{ start: number; end: number } | null>(null)
+    const [showQuantity, setShowQuantity] = useState(true)
+
+    // Fonction pour insérer du markdown dans le modal
+    const insertMarkdownInModal = (before: string, after: string = "") => {
+        const textarea = document.querySelector('textarea[data-markdown-modal]') as HTMLTextAreaElement
+        if (!textarea) return
+
+        const start = markdownModalSelection?.start || textarea.selectionStart
+        const end = markdownModalSelection?.end || textarea.selectionEnd
+        const selectedText = markdownModalContent.substring(start, end)
+        const newText = markdownModalContent.substring(0, start) + before + selectedText + after + markdownModalContent.substring(end)
+        setMarkdownModalContent(newText)
+        
+        // Restaurer le focus et la sélection
+        setTimeout(() => {
+            textarea.focus()
+            const newStart = start + before.length
+            const newEnd = newStart + selectedText.length
+            textarea.setSelectionRange(newStart, newEnd)
+        }, 0)
+    }
 
     // Initialiser les données
     useEffect(() => {
@@ -383,7 +410,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                     {/* Document Container */}
                     <div className={`flex-1 ${isFullscreen ? 'fixed inset-0 z-50 bg-background overflow-auto p-6' : ''}`}>
                         <div className="document-wrapper" style={{ height: isFullscreen ? 'auto' : 'calc(100vh - 100px)', overflowY: 'auto' }}>
-                            <div className={`document bg-card border border-border relative flex flex-col ${isFullscreen ? 'w-full max-w-[1200px] mx-auto' : ''}`} style={{ width: isFullscreen ? '100%' : '900px', minHeight: '1272.86px', margin: '0 auto', padding: '40px' }}>
+                            <div className={`document bg-card border border-border relative flex flex-col ${isFullscreen ? 'w-full max-w-[1200px] mx-auto' : ''}`} style={{ width: isFullscreen ? '100%' : '900px', minHeight: '1272.86px', margin: '0 auto', padding: '40px', display: 'flex', flexDirection: 'column' }}>
                                 <Button
                                     type="button"
                                     variant="ghost"
@@ -393,7 +420,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                 >
                                     {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                                 </Button>
-                                <div className="flex-1">
+                                <div style={{ flex: '1 0 auto' }}>
                                 {/* En-tête du document */}
                                 <div className="mb-8">
                                     <div className="mb-6 group relative w-fit min-h-[5rem]">
@@ -711,6 +738,12 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                     onUpdateItem={updateItem}
                                     onRemoveItem={removeItem}
                                     onAddItem={addItem}
+                                    onOpenMarkdownModal={(index, content) => {
+                                        setMarkdownModalIndex(index)
+                                        setMarkdownModalContent(content)
+                                        setMarkdownModalOpen(true)
+                                    }}
+                                    showQuantity={billingType === "COMPLET" ? showQuantity : false}
                                 />
 
                                 {/* Totaux */}
@@ -755,24 +788,12 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                     </div>
                                 )}
 
-                                {/* Bottom Section - Tout en bas de la feuille avec espacement */}
-                                <div className="mt-auto pt-12 space-y-6" style={{ marginTop: 'auto', paddingTop: '60px', paddingBottom: '40px' }}>
-                                    {/* Footer / Custom Text - Atou Services 21 */}
-                                    {complementaryOptions.freeField && (
-                                        <div className="relative group">
-                                            <div className="absolute -top-6 right-0 text-xs text-muted-foreground">
-                                                {480 - (quoteData.footerText?.length || 0)} caractères restants
-                                            </div>
-                                            <Input
-                                                value={quoteData.footerText}
-                                                onChange={(e) => setQuoteData(prev => ({ ...prev, footerText: e.target.value }))}
-                                                className="w-full text-center border-dashed border-primary/30 text-foreground bg-transparent focus:border-primary focus:ring-0 placeholder:text-muted-foreground text-sm py-2"
-                                                placeholder="Pied de page (ex: Atou Services 21)"
-                                            />
-                                        </div>
-                                    )}
+                                {/* Espace adaptatif pour pousser le contenu en bas */}
+                                <div style={{ flexGrow: 1, minHeight: '100px' }}></div>
 
-                                    {/* TVA Section - Tout en bas */}
+                                {/* Bottom Section - Tout en bas de la feuille */}
+                                <div className="space-y-6" style={{ paddingTop: '60px', paddingBottom: '40px' }}>
+                                    {/* TVA Section - Au-dessus du footer */}
                                     <div className="space-y-4">
                                         <div className="max-w-md">
                                             <Select
@@ -814,31 +835,53 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                             )}
                                         </div>
                                     </div>
+
+                                    {/* Footer / Custom Text - Atou Services 21 - Tout en bas */}
+                                    {complementaryOptions.freeField && (
+                                        <div className="relative group">
+                                            <div className="absolute -top-6 right-0 text-xs text-muted-foreground">
+                                                {480 - (quoteData.footerText?.length || 0)} caractères restants
+                                            </div>
+                                            <Input
+                                                value={quoteData.footerText}
+                                                onChange={(e) => setQuoteData(prev => ({ ...prev, footerText: e.target.value }))}
+                                                className="w-full text-center border-dashed border-primary/30 text-foreground bg-transparent focus:border-primary focus:ring-0 placeholder:text-muted-foreground text-sm py-2"
+                                                placeholder="Pied de page (ex: Atou Services 21)"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Actions (Footer of Left Column) */}
-                        {!isFullscreen && (
-                            <div className="flex justify-end gap-4 mt-8 no-print pb-8">
+                    {/* Bulle d'actions flottante en bas - Centrée */}
+                    {!isFullscreen && (
+                        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
+                            <div className="bg-card border border-border rounded-lg shadow-lg p-3 flex items-center gap-3">
                                 <Button
                                     type="button"
                                     variant="outline"
+                                    size="sm"
                                     onClick={() => navigate("/quotes")}
+                                    className="hover:bg-muted"
                                 >
                                     {t("common.actions.cancel")}
                                 </Button>
                                 <Button
                                     type="button"
                                     variant="outline"
+                                    size="sm"
                                     onClick={handleExport}
+                                    className="hover:bg-muted"
                                 >
                                     <Download className="h-4 w-4 mr-2" />
                                     {t("common.actions.export")}
                                 </Button>
                                 <Button
                                     type="button"
+                                    size="sm"
                                     onClick={handleSave}
                                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
                                 >
@@ -846,8 +889,8 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                     {t("common.actions.save")}
                                 </Button>
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
                     {/* Sidebar Options (Droite) */}
                     {!isFullscreen && (
                         <div className="w-[250px] min-w-[250px] shrink-0">
@@ -862,46 +905,60 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                     </Button>
                                 </div>
 
-                                {/* Type de facturation */}
-                                <div className="mb-6">
-                                    <div className="flex items-center gap-2 mb-3 text-primary font-semibold text-sm">
-                                        <FileText className="h-4 w-4" />
-                                        Type de facturation
-                                    </div>
-                                    <div className="space-y-3 pl-2">
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                                type="radio"
-                                                name="billingType"
-                                                checked={billingType === "RAPIDE"}
-                                                onChange={() => setBillingType("RAPIDE")}
-                                                className="w-4 h-4 text-primary border-border focus:ring-primary"
-                                            />
-                                            <span className="text-sm text-foreground">Rapide</span>
-                                        </label>
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                                type="radio"
-                                                name="billingType"
-                                                checked={billingType === "COMPLET"}
-                                                onChange={() => setBillingType("COMPLET")}
-                                                className="w-4 h-4 text-primary border-border focus:ring-primary"
-                                            />
-                                            <span className="text-sm text-foreground font-medium">Complet</span>
-                                        </label>
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                                type="radio"
-                                                name="billingType"
-                                                checked={billingType === "ELECTRONIC"}
-                                                onChange={() => setBillingType("ELECTRONIC")}
-                                                className="w-4 h-4 text-primary border-border focus:ring-primary"
-                                            />
-                                            <span className="text-sm text-foreground">Format électronique</span>
-                                            <Info className="h-4 w-4 text-muted-foreground" />
-                                        </label>
-                                    </div>
-                                </div>
+                                  {/* Type de facturation */}
+                                  <div className="mb-6">
+                                      <div className="flex items-center gap-2 mb-3 text-primary font-semibold text-sm">
+                                          <FileText className="h-4 w-4" />
+                                          Type de facturation
+                                      </div>
+                                      <div className="space-y-3 pl-2">
+                                          <label className="flex items-center gap-2 cursor-pointer">
+                                              <input
+                                                  type="radio"
+                                                  name="billingType"
+                                                  checked={billingType === "RAPIDE"}
+                                                  onChange={() => setBillingType("RAPIDE")}
+                                                  className="w-4 h-4 text-primary border-border focus:ring-primary"
+                                              />
+                                              <span className="text-sm text-foreground">Rapide</span>
+                                          </label>
+                                          <label className="flex items-center gap-2 cursor-pointer">
+                                              <input
+                                                  type="radio"
+                                                  name="billingType"
+                                                  checked={billingType === "COMPLET"}
+                                                  onChange={() => setBillingType("COMPLET")}
+                                                  className="w-4 h-4 text-primary border-border focus:ring-primary"
+                                              />
+                                              <span className="text-sm text-foreground font-medium">Complet</span>
+                                          </label>
+                                          <label className="flex items-center gap-2 cursor-pointer">
+                                              <input
+                                                  type="radio"
+                                                  name="billingType"
+                                                  checked={billingType === "ELECTRONIC"}
+                                                  onChange={() => setBillingType("ELECTRONIC")}
+                                                  className="w-4 h-4 text-primary border-border focus:ring-primary"
+                                              />
+                                              <span className="text-sm text-foreground">Format électronique</span>
+                                              <Info className="h-4 w-4 text-muted-foreground" />
+                                          </label>
+                                      </div>
+                                      {/* Option pour afficher la quantité en mode COMPLET */}
+                                      {billingType === "COMPLET" && (
+                                          <div className="mt-4 pl-2">
+                                              <label className="flex items-center gap-2 cursor-pointer">
+                                                  <input
+                                                      type="checkbox"
+                                                      checked={showQuantity}
+                                                      onChange={(e) => setShowQuantity(e.target.checked)}
+                                                      className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                                                  />
+                                                  <span className="text-sm text-foreground">Afficher la quantité</span>
+                                              </label>
+                                          </div>
+                                      )}
+                                  </div>
 
                                 {/* Client Checkboxes */}
                                 <div className="mb-6">
@@ -1026,6 +1083,142 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                     handleClientSelect(newClient)
                 }}
             />
+
+            {/* Modal pour éditer le markdown */}
+            <Dialog open={markdownModalOpen} onOpenChange={setMarkdownModalOpen}>
+                <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+                    <DialogHeader>
+                        <DialogTitle>Éditer la description</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 flex-1 flex flex-col min-h-0">
+                        <div className="border border-border rounded-lg overflow-hidden flex flex-col flex-1">
+                            {/* Toolbar Markdown */}
+                            <div className="flex items-center gap-1 p-2 border-b border-border bg-muted/50">
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => insertMarkdownInModal("**", "**")}
+                                    className="h-8 w-8 p-0"
+                                    title="Gras"
+                                >
+                                    <Bold className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => insertMarkdownInModal("*", "*")}
+                                    className="h-8 w-8 p-0"
+                                    title="Italique"
+                                >
+                                    <Italic className="h-4 w-4" />
+                                </Button>
+                                <div className="w-px h-6 bg-border mx-1" />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => insertMarkdownInModal("## ", "")}
+                                    className="h-8 w-8 p-0"
+                                    title="Titre 1"
+                                >
+                                    <Heading1 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => insertMarkdownInModal("### ", "")}
+                                    className="h-8 w-8 p-0"
+                                    title="Titre 2"
+                                >
+                                    <Heading2 className="h-4 w-4" />
+                                </Button>
+                                <div className="w-px h-6 bg-border mx-1" />
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => insertMarkdownInModal("- ", "\n")}
+                                    className="h-8 w-8 p-0"
+                                    title="Liste"
+                                >
+                                    <List className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => insertMarkdownInModal("`", "`")}
+                                    className="h-8 w-8 p-0"
+                                    title="Code"
+                                >
+                                    <Code className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => insertMarkdownInModal("> ", "")}
+                                    className="h-8 w-8 p-0"
+                                    title="Citation"
+                                >
+                                    <Quote className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <Textarea
+                                data-markdown-modal
+                                value={markdownModalContent}
+                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+                                    setMarkdownModalContent(e.target.value)
+                                    const textarea = e.target
+                                    setMarkdownModalSelection({
+                                        start: textarea.selectionStart,
+                                        end: textarea.selectionEnd
+                                    })
+                                }}
+                                onSelect={(e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+                                    const textarea = e.currentTarget
+                                    setMarkdownModalSelection({
+                                        start: textarea.selectionStart,
+                                        end: textarea.selectionEnd
+                                    })
+                                }}
+                                placeholder="Description (Markdown supporté)"
+                                className="flex-1 min-h-[400px] font-mono text-sm border-0 focus-visible:ring-0 resize-none"
+                                style={{ minHeight: '400px' }}
+                            />
+                        </div>
+                        <div className="flex justify-end gap-3">
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setMarkdownModalOpen(false)
+                                    setMarkdownModalIndex(null)
+                                    setMarkdownModalContent("")
+                                    setMarkdownModalSelection(null)
+                                }}
+                            >
+                                Annuler
+                            </Button>
+                            <Button
+                                onClick={() => {
+                                    if (markdownModalIndex !== null) {
+                                        updateItem(markdownModalIndex, "description", markdownModalContent)
+                                        setMarkdownModalOpen(false)
+                                        setMarkdownModalIndex(null)
+                                        setMarkdownModalContent("")
+                                        setMarkdownModalSelection(null)
+                                    }
+                                }}
+                            >
+                                Enregistrer
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     )
 }
