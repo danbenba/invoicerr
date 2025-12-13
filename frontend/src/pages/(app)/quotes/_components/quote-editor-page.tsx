@@ -6,7 +6,7 @@ import { useGet, usePost, usePatch } from "@/hooks/use-fetch"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Save, X, Download, Upload, Plus, Settings, FileText, User, Languages, AlignLeft, Info } from "lucide-react"
+import { ArrowLeft, Save, X, Download, Upload, Settings, FileText, User, Languages, AlignLeft, Info } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslation } from "react-i18next"
 import type { Company, Client } from "@/types"
@@ -16,6 +16,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Calendar } from "@/components/ui/calendar"
 import { ClientUpsert } from "../../clients/_components/client-upsert"
 import { DatePicker } from "@/components/date-picker"
+import { QuoteItemsTable } from "./quote-items-table"
 
 interface QuoteEditorPageProps {
     quoteId?: string
@@ -29,6 +30,7 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
     const { data: company } = useGet<Company>("/api/company/info")
     const { data: pdfConfig } = useGet<any>("/api/company/pdf-template")
     const { data: quote } = useGet<any>(quoteId ? `/api/quotes/${quoteId}` : null)
+    const { data: quoteSettings } = useGet<any>("/api/company/quote-settings")
     const [searchTerm, setSearchTerm] = useState("")
     const { data: clients } = useGet<Client[]>(`/api/clients/search?query=${searchTerm}`)
 
@@ -718,144 +720,19 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                 )}
 
                                 {/* Tableau des lignes */}
-                                <div className="mb-6">
-                                    <div className="rounded-t-lg overflow-hidden border border-border">
-                                        <table className="w-full border-collapse">
-                                            <thead className="bg-primary text-primary-foreground">
-                                                <tr>
-                                                    {billingType === "COMPLET" && (
-                                                        <th className="text-left py-3 px-4 text-sm font-semibold w-32">Type</th>
-                                                    )}
-                                                    <th className="text-left py-3 px-4 text-sm font-semibold tracking-wide">Désignation</th>
-                                                    {billingType === "COMPLET" && (
-                                                        <th className="text-right py-3 px-4 text-sm font-semibold w-24">Qté</th>
-                                                    )}
-                                                    {quoteData.vatExemptionReason === "none" && (
-                                                        <th className="text-right py-3 px-4 text-sm font-semibold w-24">TVA</th>
-                                                    )}
-                                                    <th className="text-right py-3 px-4 text-sm font-semibold w-32">Montant HT</th>
-                                                    <th className="w-10"></th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="bg-white">
-                                                {quoteData.items.map((item, index) => (
-                                                    item.type === QuoteItemType.SECTION ? (
-                                                        <tr key={index} className="border-b-2 border-primary/20 group">
-                                                            <td className="py-4 px-4 bg-primary/5" colSpan={billingType === "COMPLET" ? (quoteData.vatExemptionReason === "none" ? 6 : 5) : (quoteData.vatExemptionReason === "none" ? 4 : 3)}>
-                                                                <div className="flex items-center gap-2">
-                                                                    <Input
-                                                                        value={item.description}
-                                                                        onChange={(e) => updateItem(index, "description", e.target.value)}
-                                                                        placeholder="Titre de la section / Désignation"
-                                                                        className="border-0 focus:ring-0 rounded-none px-0 h-auto text-lg font-bold text-primary italic w-full bg-transparent placeholder:text-primary/50 py-2"
-                                                                    />
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        onClick={() => removeItem(index)}
-                                                                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all shrink-0"
-                                                                    >
-                                                                        <X className="h-4 w-4" />
-                                                                    </Button>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    ) : (
-                                                        <tr key={index} className="border-b border-dashed border-border group hover:bg-muted/50">
-                                                            {billingType === "COMPLET" && (
-                                                                <td className="py-2 px-4">
-                                                                    <Select value={item.type || "SERVICE"} onValueChange={(val) => updateItem(index, "type", val)}>
-                                                                        <SelectTrigger className="border-0 h-9 p-0 focus:ring-0 focus:border-b focus:border-primary rounded-none">
-                                                                            <SelectValue />
-                                                                        </SelectTrigger>
-                                                                        <SelectContent>
-                                                                            <SelectItem value="SERVICE">Prestation</SelectItem>
-                                                                            <SelectItem value="GOOD">Bien</SelectItem>
-                                                                        </SelectContent>
-                                                                    </Select>
-                                                                </td>
-                                                            )}
-                                                            <td className="py-2 px-4">
-                                                                <Input
-                                                                    value={item.description}
-                                                                    onChange={(e) => updateItem(index, "description", e.target.value)}
-                                                                    placeholder="Description"
-                                                                    className="border-0 focus:ring-0 focus:border-b focus:border-primary rounded-none px-0 h-9 text-sm w-full bg-transparent"
-                                                                />
-                                                            </td>
-                                                            {billingType === "COMPLET" && (
-                                                                <td className="py-2 px-4">
-                                                                    <Input
-                                                                        type="number"
-                                                                        value={item.quantity}
-                                                                        onChange={(e) => updateItem(index, "quantity", Number(e.target.value))}
-                                                                        className="text-right border-0 focus:ring-0 focus:border-b focus:border-primary rounded-none px-0 h-9 text-sm w-full bg-transparent"
-                                                                    />
-                                                                </td>
-                                                            )}
-                                                            {quoteData.vatExemptionReason === "none" && (
-                                                                <td className="py-2 px-4">
-                                                                    <div className="flex items-center justify-end gap-1">
-                                                                        <Input
-                                                                            type="number"
-                                                                            value={item.vatRate || ""}
-                                                                            onChange={(e) => updateItem(index, "vatRate", Number(e.target.value) || 0)}
-                                                                            className="text-right border-0 focus:ring-0 focus:border-b focus:border-primary rounded-none px-0 h-9 text-sm w-12 bg-transparent"
-                                                                        />
-                                                                        <span className="text-sm text-muted-foreground">%</span>
-                                                                    </div>
-                                                                </td>
-                                                            )}
-                                                            <td className="py-2 px-4">
-                                                                <div className="flex items-center justify-end">
-                                                                    <Input
-                                                                        type="number"
-                                                                        step="0.01"
-                                                                        value={item.unitPrice || ""}
-                                                                        onChange={(e) => updateItem(index, "unitPrice", Number(e.target.value) || 0)}
-                                                                        className="text-right border-0 focus:ring-0 focus:border-b focus:border-primary rounded-none px-0 h-9 text-sm w-full bg-transparent font-medium"
-                                                                    />
-                                                                </div>
-                                                            </td>
-                                                            <td className="py-2 px-2 text-right">
-                                                                <Button
-                                                                    type="button"
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => removeItem(index)}
-                                                                    className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
-                                                                >
-                                                                    <X className="h-4 w-4" />
-                                                                </Button>
-                                                            </td>
-                                                        </tr>
-                                                    )
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    <div className="flex gap-2 mt-4">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={addItem}
-                                            className="border-primary/30 text-primary hover:bg-primary/10 hover:text-primary font-medium"
-                                        >
-                                            <Plus className="h-4 w-4 mr-2" />
-                                            Ligne simple
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={addSection}
-                                            className="border-border text-muted-foreground hover:bg-muted hover:text-foreground font-medium"
-                                        >
-                                            Ligne de désignation
-                                        </Button>
-                                    </div>
-                                </div>
+                                <QuoteItemsTable
+                                    items={quoteData.items}
+                                    billingType={billingType}
+                                    vatExemptionReason={quoteData.vatExemptionReason}
+                                    currency={quoteData.currency}
+                                    primaryColor={quoteSettings?.primaryColor || "#6366f1"}
+                                    secondaryColor={quoteSettings?.secondaryColor || "#e0e7ff"}
+                                    tableTextColor={quoteSettings?.tableTextColor || "#ffffff"}
+                                    onUpdateItem={updateItem}
+                                    onRemoveItem={removeItem}
+                                    onAddItem={addItem}
+                                    onAddSection={addSection}
+                                />
 
                                 {/* Totaux */}
                                 <div className="border-t-2 border-border pt-4 mb-6">
@@ -1150,32 +1027,6 @@ export function QuoteEditorPage({ quoteId }: QuoteEditorPageProps) {
                                             />
                                             <span className="text-sm text-foreground">Remise globale</span>
                                         </label>
-                                    </div>
-                                </div>
-
-                                {/* Aperçu */}
-                                <div className="mt-6 pt-6 border-t border-border">
-                                    <div className="flex items-center gap-2 mb-3 text-primary font-semibold text-sm">
-                                        <FileText className="h-4 w-4" />
-                                        {t("quotes.upsert.options.preview.title") || "Aperçu"}
-                                    </div>
-                                    <div className="space-y-2 pl-2">
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">{t("quotes.upsert.options.preview.items") || "Articles"}:</span>
-                                            <span className="font-medium text-foreground">{quoteData.items.filter(i => i.type !== QuoteItemType.SECTION).length}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">{t("quotes.upsert.options.preview.totalHT") || "Total HT"}:</span>
-                                            <span className="font-medium text-foreground">{quoteData.currency} {totals.totalHT}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">{t("quotes.upsert.options.preview.totalVAT") || "Total TVA"}:</span>
-                                            <span className="font-medium text-foreground">{quoteData.currency} {totals.totalVAT}</span>
-                                        </div>
-                                        <div className="flex justify-between text-sm pt-2 border-t border-border">
-                                            <span className="font-semibold text-foreground">{t("quotes.upsert.options.preview.totalTTC") || "Total TTC"}:</span>
-                                            <span className="font-bold text-primary">{quoteData.currency} {totals.totalTTC}</span>
-                                        </div>
                                     </div>
                                 </div>
                             </div>

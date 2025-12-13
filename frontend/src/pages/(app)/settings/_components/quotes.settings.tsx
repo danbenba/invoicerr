@@ -9,7 +9,6 @@ import { useEffect, useState } from "react"
 import { useGet, usePost } from "@/hooks/use-fetch"
 import { toast } from "sonner"
 import { useForm } from "react-hook-form"
-import { useTranslation } from "react-i18next"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { DatePicker } from "@/components/date-picker"
@@ -43,7 +42,6 @@ interface QuoteSettings {
 }
 
 export default function QuotesSettings() {
-    const { t } = useTranslation()
 
     const quoteSettingsSchema = z.object({
         defaultDate: z.date().optional(),
@@ -149,14 +147,17 @@ export default function QuotesSettings() {
             })
     }
 
-    return (
-        <div>
-            <div className="mb-4">
-                <h1 className="text-3xl font-bold">Paramètres des devis</h1>
-                <p className="text-muted-foreground">Configurez les paramètres par défaut pour vos devis</p>
-            </div>
+    const watchedValues = form.watch()
 
-            <Form {...form}>
+    return (
+        <div className="flex gap-6">
+            <div className="flex-1">
+                <div className="mb-4">
+                    <h1 className="text-3xl font-bold">Paramètres des devis</h1>
+                    <p className="text-muted-foreground">Configurez les paramètres par défaut pour vos devis</p>
+                </div>
+
+                <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     {/* Date par défaut */}
                     <Card>
@@ -607,6 +608,88 @@ export default function QuotesSettings() {
                     </div>
                 </form>
             </Form>
+            </div>
+
+            {/* Preview fixe */}
+            <div className="w-96 shrink-0 sticky top-6 h-fit">
+                <Card className="border-2">
+                    <CardHeader>
+                        <CardTitle className="text-lg">Aperçu en direct</CardTitle>
+                        <CardDescription>Visualisez vos paramètres en temps réel</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Type de facturation:</span>
+                                <span className="font-medium">{watchedValues.defaultBillingType || "COMPLET"}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-muted-foreground">Texte par défaut:</span>
+                                <span className="font-medium truncate max-w-[200px]" title={watchedValues.defaultFooterText || "Atou Services 21"}>
+                                    {watchedValues.defaultFooterText || "Atou Services 21"}
+                                </span>
+                            </div>
+                            <div className="pt-2 border-t">
+                                <div className="text-xs text-muted-foreground mb-2">Options client:</div>
+                                <div className="space-y-1 text-xs">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${watchedValues.defaultClientOptions?.deliveryAddress ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                        <span>Adresse de livraison</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${watchedValues.defaultClientOptions?.siret ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                        <span>SIRET</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${watchedValues.defaultClientOptions?.vat ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                        <span>TVA</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="pt-2 border-t">
+                                <div className="text-xs text-muted-foreground mb-2">Options complémentaires:</div>
+                                <div className="space-y-1 text-xs">
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${watchedValues.defaultComplementaryOptions?.acceptance ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                        <span>Acceptation</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${watchedValues.defaultComplementaryOptions?.signature ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                        <span>Signature</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${watchedValues.defaultComplementaryOptions?.title ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                        <span>Titre</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className={`w-2 h-2 rounded-full ${watchedValues.defaultComplementaryOptions?.freeField ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                        <span>Champ libre</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="pt-2 border-t">
+                                <div className="text-xs text-muted-foreground mb-2">Couleurs:</div>
+                                <div className="flex gap-2">
+                                    <div className="flex items-center gap-1">
+                                        <div 
+                                            className="w-4 h-4 rounded border border-border" 
+                                            style={{ backgroundColor: watchedValues.primaryColor || "#6366f1" }}
+                                        />
+                                        <span className="text-xs">Principal</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <div 
+                                            className="w-4 h-4 rounded border border-border" 
+                                            style={{ backgroundColor: watchedValues.secondaryColor || "#e0e7ff" }}
+                                        />
+                                        <span className="text-xs">Secondaire</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         </div>
     )
 }
