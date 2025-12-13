@@ -11,6 +11,8 @@ export type Path =
   | `/clients`
   | `/dashboard`
   | `/invoices`
+  | `/invoices/:id/edit`
+  | `/invoices/new`
   | `/payment-methods`
   | `/quotes`
   | `/quotes/:id/edit`
@@ -21,6 +23,7 @@ export type Path =
   | `/stats`
 
 export type Params = {
+  '/invoices/:id/edit': { id: string }
   '/quotes/:id/edit': { id: string }
   '/settings/:tab?': { tab?: string }
   '/signature/:id': { id: string }

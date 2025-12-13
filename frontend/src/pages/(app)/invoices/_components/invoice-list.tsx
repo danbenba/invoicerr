@@ -1,4 +1,4 @@
-import { Banknote, Code, Download, Edit, Eye, FileText, Mail, Plus, ReceiptText, Trash2 } from "lucide-react"
+import { Banknote, Code, Download, Edit, Eye, FileText, Mail, Plus, ReceiptText, Trash2, FileCheck, Sparkles, Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { forwardRef, useEffect, useImperativeHandle, useState } from "react"
@@ -6,7 +6,7 @@ import { useGet, useGetRaw, usePost } from "@/hooks/use-fetch"
 
 import BetterPagination from "../../../../components/pagination"
 import { Button } from "@/components/ui/button"
-import type { Invoice } from "@/types"
+import type { Invoice, Quote } from "@/types"
 import { InvoiceDeleteDialog } from "./invoice-delete"
 import { InvoicePdfModal } from "./invoice-pdf-view"
 import { InvoiceUpsert } from "./invoice-upsert"
@@ -14,6 +14,7 @@ import { InvoiceViewDialog } from "./invoice-view"
 import type React from "react"
 import { toast } from "sonner"
 import { useTranslation } from "react-i18next"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 interface InvoiceListProps {
     invoices: Invoice[]
@@ -49,10 +50,15 @@ export const InvoiceList = forwardRef<InvoiceListHandle, InvoiceListProps>(
         const { trigger: triggerCreateReceipt } = usePost(`/api/receipts/create-from-invoice`)
 
         const [createInvoiceDialog, setCreateInvoiceDialog] = useState<boolean>(false)
+        const [choiceDialogOpen, setChoiceDialogOpen] = useState<boolean>(false)
+        const [convertingQuote, setConvertingQuote] = useState<boolean>(false)
+        const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null)
         const [editInvoiceDialog, setEditInvoiceDialog] = useState<Invoice | null>(null)
         const [viewInvoiceDialog, setViewInvoiceDialog] = useState<Invoice | null>(null)
         const [viewInvoicePdfDialog, setViewInvoicePdfDialog] = useState<Invoice | null>(null)
         const [deleteInvoiceDialog, setDeleteInvoiceDialog] = useState<Invoice | null>(null)
+        const { data: quotesResponse } = useGet<{ pageCount: number; quotes: Quote[] }>(`/api/quotes?page=1`)
+        const quotes = quotesResponse?.quotes || []
         const [downloadTrigger, setDownloadTrigger] = useState<{
             invoice: Invoice
             format: string
@@ -66,9 +72,45 @@ export const InvoiceList = forwardRef<InvoiceListHandle, InvoiceListProps>(
 
         useImperativeHandle(ref, () => ({
             handleAddClick() {
-                setCreateInvoiceDialog(true)
+                setChoiceDialogOpen(true)
             },
         }))
+
+        const handleCreateFromScratch = () => {
+            setChoiceDialogOpen(false)
+            // Rediriger vers la page de création
+            window.location.href = "/invoices/new"
+        }
+
+        const handleConvertQuote = async (quote: Quote) => {
+            setSelectedQuote(quote)
+            setChoiceDialogOpen(false)
+            setConvertingQuote(true)
+            
+            try {
+                // Appeler l'API pour convertir le devis en facture
+                const response = await fetch("/api/invoices/create-from-quote", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ quoteId: quote.id })
+                })
+                
+                if (!response.ok) throw new Error("Erreur lors de la conversion")
+                
+                const newInvoice = await response.json()
+                
+                // Attendre 2 secondes pour l'animation
+                await new Promise(resolve => setTimeout(resolve, 2000))
+                
+                // Rediriger vers l'éditeur de facture
+                window.location.href = `/invoices/${newInvoice.id}/edit`
+            } catch (error) {
+                console.error(error)
+                toast.error("Erreur lors de la conversion du devis")
+                setConvertingQuote(false)
+                setChoiceDialogOpen(true)
+            }
+        }
 
         useEffect(() => {
             if (downloadTrigger && file) {
@@ -89,7 +131,8 @@ export const InvoiceList = forwardRef<InvoiceListHandle, InvoiceListProps>(
         }, [downloadTrigger, file])
 
         function handleEdit(invoice: Invoice) {
-            setEditInvoiceDialog(invoice)
+            // Rediriger vers l'éditeur
+            window.location.href = `/invoices/${invoice.id}/edit`
         }
 
         function handleView(invoice: Invoice) {
@@ -408,22 +451,83 @@ export const InvoiceList = forwardRef<InvoiceListHandle, InvoiceListProps>(
                     )}
                 </Card >
 
-                <InvoiceUpsert
-                    open={createInvoiceDialog}
-                    onOpenChange={(open: boolean) => {
-                        setCreateInvoiceDialog(open)
-                        if (!open) mutate && mutate()
-                    }}
-                />
+                {/* Dialog de choix */}
+                <Dialog open={choiceDialogOpen} onOpenChange={setChoiceDialogOpen}>
+                    <DialogContent className="sm:max-w-[500px]">
+                        <DialogHeader>
+                            <DialogTitle>Créer une facture</DialogTitle>
+                            <DialogDescription>
+                                Choisissez comment créer votre facture
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <Button
+                                onClick={handleCreateFromScratch}
+                                variant="outline"
+                                className="w-full justify-start h-auto p-4"
+                            >
+                                <div className="flex items-center gap-4 w-full">
+                                    <div className="p-3 bg-primary/10 rounded-lg">
+                                        <Sparkles className="h-6 w-6 text-primary" />
+                                    </div>
+                                    <div className="text-left">
+                                        <div className="font-semibold">Créer une facture de zéro</div>
+                                        <div className="text-sm text-muted-foreground">Commencer avec une facture vide</div>
+                                    </div>
+                                </div>
+                            </Button>
+                            <div className="space-y-2 w-full">
+                                <div className="flex items-center gap-4 p-4 border border-border rounded-lg">
+                                    <div className="p-3 bg-primary/10 rounded-lg">
+                                        <FileCheck className="h-6 w-6 text-primary" />
+                                    </div>
+                                    <div className="text-left flex-1">
+                                        <div className="font-semibold">Convertir un devis en facture</div>
+                                        <div className="text-sm text-muted-foreground">
+                                            {quotes && quotes.length > 0 
+                                                ? `${quotes.length} devis disponible${quotes.length > 1 ? 's' : ''}`
+                                                : 'Aucun devis disponible'
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                                {quotes && quotes.length > 0 && (
+                                    <div className="max-h-48 overflow-y-auto space-y-1 border border-border rounded-lg p-2">
+                                        {quotes.slice(0, 5).map((quote) => (
+                                            <Button
+                                                key={quote.id}
+                                                onClick={() => handleConvertQuote(quote)}
+                                                variant="ghost"
+                                                className="w-full justify-start text-left h-auto py-2"
+                                            >
+                                                <div className="flex flex-col items-start">
+                                                    <span className="font-medium">Devis {quote.rawNumber || quote.number}</span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {quote.client?.name || 'Client'} - {quote.totalTTC} {quote.currency}
+                                                    </span>
+                                                </div>
+                                            </Button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
 
-                <InvoiceUpsert
-                    open={!!editInvoiceDialog}
-                    invoice={editInvoiceDialog}
-                    onOpenChange={(open: boolean) => {
-                        if (!open) setEditInvoiceDialog(null)
-                        mutate && mutate()
-                    }}
-                />
+                {/* Dialog de conversion en cours */}
+                <Dialog open={convertingQuote} onOpenChange={() => {}}>
+                    <DialogContent className="sm:max-w-[400px]">
+                        <div className="flex flex-col items-center justify-center py-8 space-y-4">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            <DialogTitle>Conversion en cours</DialogTitle>
+                            <DialogDescription className="text-center">
+                                Conversion du devis en facture...
+                            </DialogDescription>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+
 
                 <InvoiceViewDialog
                     invoice={viewInvoiceDialog}

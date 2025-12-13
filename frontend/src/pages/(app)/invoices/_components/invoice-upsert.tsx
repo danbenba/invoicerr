@@ -29,9 +29,10 @@ interface InvoiceUpsertDialogProps {
     invoice?: Invoice | null
     open: boolean
     onOpenChange: (open: boolean) => void
+    initialQuoteId?: string
 }
 
-export function InvoiceUpsert({ invoice, open, onOpenChange }: InvoiceUpsertDialogProps) {
+export function InvoiceUpsert({ invoice, open, onOpenChange, initialQuoteId }: InvoiceUpsertDialogProps) {
     const { t } = useTranslation()
     const isEdit = !!invoice
 
@@ -49,6 +50,8 @@ export function InvoiceUpsert({ invoice, open, onOpenChange }: InvoiceUpsertDial
         notes: z.string().optional(),
         paymentMethodId: z.string().optional(),
         currency: z.string().optional(),
+        vatExemptionReason: z.string().optional(),
+        vatExemptionText: z.string().optional(),
         items: z.array(
             z.object({
                 id: z.string().optional(),
@@ -105,6 +108,8 @@ export function InvoiceUpsert({ invoice, open, onOpenChange }: InvoiceUpsertDial
             currency: undefined,
             items: [],
             notes: "",
+            vatExemptionReason: "none",
+            vatExemptionText: "",
         },
     })
 
@@ -118,6 +123,8 @@ export function InvoiceUpsert({ invoice, open, onOpenChange }: InvoiceUpsertDial
                 notes: inv.notes || "",
                 paymentMethodId: inv.paymentMethodId || "",
                 currency: inv.currency || "",
+                vatExemptionReason: (inv as any).vatExemptionReason || "none",
+                vatExemptionText: (inv as any).vatExemptionText || "",
                 items: (inv.items || [])
                     .sort((a: any, b: any) => a.order - b.order)
                     .map((item: any) => ({
@@ -131,17 +138,55 @@ export function InvoiceUpsert({ invoice, open, onOpenChange }: InvoiceUpsertDial
                     })),
             })
         } else {
-            form.reset({
-                quoteId: undefined,
-                clientId: "",
-                dueDate: undefined,
-                notes: "",
-                paymentMethodId: "",
-                currency: undefined,
-                items: [],
-            })
+            // Si on a un initialQuoteId, charger les données du devis
+            if (initialQuoteId && quotes) {
+                const quote = quotes.find(q => q.id === initialQuoteId)
+                if (quote) {
+                    form.reset({
+                        quoteId: quote.id,
+                        clientId: quote.clientId || "",
+                        dueDate: undefined,
+                        notes: quote.notes || "",
+                        paymentMethodId: quote.paymentMethodId || "",
+                        currency: quote.currency || "",
+                        vatExemptionReason: (quote as any).vatExemptionReason || "none",
+                        vatExemptionText: (quote as any).vatExemptionText || "",
+                        items: (quote.items || [])
+                            .sort((a: any, b: any) => a.order - b.order)
+                            .map((item: any) => ({
+                                id: item.id,
+                                description: item.description || "",
+                                quantity: item.quantity || 1,
+                                unitPrice: item.unitPrice || 0,
+                                vatRate: item.vatRate || 0,
+                                type: item.type || 'SERVICE',
+                                order: item.order || 0,
+                            })),
+                    })
+                } else {
+                    form.reset({
+                        quoteId: initialQuoteId,
+                        clientId: "",
+                        dueDate: undefined,
+                        notes: "",
+                        paymentMethodId: "",
+                        currency: undefined,
+                        items: [],
+                    })
+                }
+            } else {
+                form.reset({
+                    quoteId: undefined,
+                    clientId: "",
+                    dueDate: undefined,
+                    notes: "",
+                    paymentMethodId: "",
+                    currency: undefined,
+                    items: [],
+                })
+            }
         }
-    }, [invoice, form, isEdit])
+    }, [invoice, form, isEdit, initialQuoteId, quotes])
 
     const { control, handleSubmit, setValue } = form
     const { fields, append, move, remove } = useFieldArray({
@@ -320,36 +365,98 @@ export function InvoiceUpsert({ invoice, open, onOpenChange }: InvoiceUpsertDial
                                 )}
                             />
 
-                            <FormField
-                                control={control}
-                                name="paymentMethodId"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>{t("invoices.upsert.form.paymentMethod.label")}</FormLabel>
-                                        <FormControl>
-                                            <Select value={field.value ?? ""} onValueChange={(val) => {
-                                                const v = val || "";
-                                                field.onChange(v);
-                                            }}>
-                                                <SelectTrigger className="w-full" aria-label={t("invoices.upsert.form.paymentMethod.label") as string}>
-                                                    <SelectValue placeholder={t("invoices.upsert.form.paymentMethod.placeholder")} />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {(paymentMethods || []).map((pm: PaymentMethod) => (
-                                                        <SelectItem key={pm.id} value={pm.id}>
-                                                            {pm.name} - {pm.type == PaymentMethodType.BANK_TRANSFER ? t("paymentMethods.fields.type.bank_transfer") : pm.type == PaymentMethodType.PAYPAL ? t("paymentMethods.fields.type.paypal") : pm.type == PaymentMethodType.CHECK ? t("paymentMethods.fields.type.check") : pm.type == PaymentMethodType.CASH ? t("paymentMethods.fields.type.cash") : pm.type == PaymentMethodType.OTHER ? t("paymentMethods.fields.type.other") : pm.type}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </FormControl>
-                                        <FormDescription>
-                                            {t("invoices.upsert.form.paymentMethod.description")}
-                                        </FormDescription>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                            {/* Section TVA */}
+                            <div className="space-y-4">
+                                <FormField
+                                    control={control}
+                                    name="vatExemptionReason"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Motif d'exonération de TVA</FormLabel>
+                                            <FormControl>
+                                                <Select 
+                                                    value={field.value ?? "none"} 
+                                                    onValueChange={(val) => {
+                                                        field.onChange(val);
+                                                        // Auto-remplir le texte selon le motif
+                                                        if (val === "not_subject") {
+                                                            form.setValue("vatExemptionText", "TVA non applicable, art. 293 B du CGI");
+                                                        } else if (val === "france_no_vat") {
+                                                            form.setValue("vatExemptionText", "Exonération de TVA, article 262 ter-I du CGI");
+                                                        } else if (val === "eu_no_vat") {
+                                                            form.setValue("vatExemptionText", "Exonération de TVA, article 262 ter-I du CGI (Livraison intracommunautaire)");
+                                                        } else if (val === "none") {
+                                                            form.setValue("vatExemptionText", "");
+                                                        }
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="w-full">
+                                                        <SelectValue placeholder="Motif d'exonération de TVA" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">Aucun motif</SelectItem>
+                                                        <SelectItem value="not_subject">Je ne suis pas soumis à la TVA</SelectItem>
+                                                        <SelectItem value="france_no_vat">Prestation France sans TVA</SelectItem>
+                                                        <SelectItem value="eu_no_vat">Prestation hors France</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                <FormField
+                                    control={control}
+                                    name="vatExemptionText"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                {form.watch("vatExemptionReason") !== "none" && (
+                                                    <Input
+                                                        {...field}
+                                                        placeholder="Mention légale de TVA..."
+                                                        className="w-full"
+                                                    />
+                                                )}
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {/* Mode de paiement - En dessous de la TVA */}
+                                <FormField
+                                    control={control}
+                                    name="paymentMethodId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>{t("invoices.upsert.form.paymentMethod.label")}</FormLabel>
+                                            <FormControl>
+                                                <Select value={field.value ?? ""} onValueChange={(val) => {
+                                                    const v = val || "";
+                                                    field.onChange(v);
+                                                }}>
+                                                    <SelectTrigger className="w-full" aria-label={t("invoices.upsert.form.paymentMethod.label") as string}>
+                                                        <SelectValue placeholder={t("invoices.upsert.form.paymentMethod.placeholder")} />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {(paymentMethods || []).map((pm: PaymentMethod) => (
+                                                            <SelectItem key={pm.id} value={pm.id}>
+                                                                {pm.name} - {pm.type == PaymentMethodType.BANK_TRANSFER ? t("paymentMethods.fields.type.bank_transfer") : pm.type == PaymentMethodType.PAYPAL ? t("paymentMethods.fields.type.paypal") : pm.type == PaymentMethodType.CHECK ? t("paymentMethods.fields.type.check") : pm.type == PaymentMethodType.CASH ? t("paymentMethods.fields.type.cash") : pm.type == PaymentMethodType.OTHER ? t("paymentMethods.fields.type.other") : pm.type}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormControl>
+                                            <FormDescription>
+                                                {t("invoices.upsert.form.paymentMethod.description")}
+                                            </FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
 
 
                             <div className="space-y-2">
